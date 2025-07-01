@@ -1,5 +1,8 @@
 let data1 = [];
 let data2 = [];
+let matchedDataGlobal = [];
+let unmatched1Global = [];
+let unmatched2Global = [];
 
 function reconcile() {
   const fileInput1 = document.getElementById("file1");
@@ -18,23 +21,27 @@ function reconcile() {
   // Reset UI
   const progressBar = document.getElementById("progressBar");
   const resultsDiv = document.getElementById("results");
-  resultsDiv.innerHTML = "<p>Processing files, please wait...</p>";
-  progressBar.value = 0;
 
-  // Simulate progress updates
+  progressBar.style.display = 'block'; // Make sure it's visible
   progressBar.value = 10;
+
+  resultsDiv.innerHTML = "<p>⏳ Loading first file...</p>";
 
   setTimeout(() => {
     parseFile(file1, 1, () => {
       progressBar.value = 40;
+      resultsDiv.innerHTML += "<p>📄 Loaded first file. Loading second file...</p>";
 
       setTimeout(() => {
         parseFile(file2, 2, () => {
           progressBar.value = 70;
+          resultsDiv.innerHTML += "<p>🔍 Matching data...</p>";
 
           setTimeout(() => {
             matchData(primaryField, secondaryField);
             progressBar.value = 100;
+            resultsDiv.innerHTML = "<p>✅ Matching complete!</p>";
+            displayResults(matchedDataGlobal, unmatched1Global, unmatched2Global);
           }, 200);
         });
       }, 200);
@@ -158,3 +165,6 @@ function clearLogs() {
   document.getElementById("results").innerHTML = "";
   document.getElementById("progressBar").value = 0;
 }
+matchedDataGlobal = matched;
+unmatched1Global = unmatched1;
+unmatched2Global = unmatched2;
