@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Excel Reconciliation App</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Excel Reconciliation Tool</h1>
+
+    <input type="file" id="file1" accept=".csv, .xlsx" />
+    <label for="file1">Upload Document 1</label><br/>
+
+    <input type="file" id="file2" accept=".csv, .xlsx" />
+    <label for="file2">Upload Document 2</label><br/><br/>
+
+    <label for="primaryField">Primary Identifier:</label>
+    <input type="text" id="primaryField" placeholder="e.g., InvoiceID"/><br/>
+
+    <label for="secondaryField">Secondary Match Field (Optional):</label>
+    <input type="text" id="secondaryField" placeholder="e.g., Amount"/><br/><br/>
+
+    <button onclick="reconcile()">Reconcile Files</button>
+    <progress id="progressBar" value="0" max="100"></progress><br/><br/>
+
+    <div id="results">
+      <h2>Results</h2>
+      <button onclick="downloadReport()">Download Report</button>
+      <button onclick="clearLogs()">Clear Logs</button>
+      <table id="resultTable"></table>
+    </div>
+  </div>
+
+  <!-- JS Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js "></script>
+  <script src="app.js"></script>
+</body>
+</html>
