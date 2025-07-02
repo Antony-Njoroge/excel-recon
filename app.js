@@ -5,9 +5,6 @@ let unmatched1Global = [];
 let unmatched2Global = [];
 
 function reconcile() {
-  console.log("File 1:", file1.name);
-  console.log("File 2:", file2.name);
-  console.log("Primary Field:", primaryField);
   const fileInput1 = document.getElementById("file1");
   const fileInput2 = document.getElementById("file2");
   const primaryField = document.getElementById("primaryField").value.trim();
@@ -21,7 +18,6 @@ function reconcile() {
     return;
   }
 
-  // Reset UI
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
   const resultsDiv = document.getElementById("results");
@@ -29,15 +25,14 @@ function reconcile() {
   progressBar.style.display = 'block';
   progressBar.value = 0;
   progressText.textContent = "Starting...";
-  resultsDiv.innerHTML = ""; // Clear old results
+  resultsDiv.innerHTML = "";
 
   setTimeout(() => {
     progressText.textContent = "⏳ Loading first file...";
     progressBar.value = 10;
 
     parseFile(file1, 1, () => {
-      console.log("Parsed File", id, "Data Sample:", data.slice(0, 2));
-      progressText.textContent = "📄 Loaded first file. Loading second file...";
+      progressText.textContent = "📄 Loaded File 1. Loading File 2...";
       progressBar.value = 40;
 
       setTimeout(() => {
@@ -49,7 +44,6 @@ function reconcile() {
             matchData(primaryField, secondaryField);
             progressBar.value = 100;
             progressText.textContent = "✅ Matching complete!";
-
             displayResults(matchedDataGlobal, unmatched1Global, unmatched2Global);
           }, 200);
         });
@@ -99,14 +93,12 @@ function matchData(primaryField, secondaryField) {
   const unmatched1 = [];
   const unmatched2 = [];
 
-  // Build map for file 1
   for (const row of data1) {
     const key = row[primaryField];
     if (!map1[key]) map1[key] = [];
     map1[key].push(row);
   }
 
-  // Match with file 2
   for (const row of data2) {
     const key = row[primaryField];
     if (map1[key]) {
@@ -129,78 +121,26 @@ function matchData(primaryField, secondaryField) {
 
   for (const key in map1) {
     unmatched1.push(...map1[key]);
-  } // 👇 Add this before closing the function
+  }
+
   matchedDataGlobal = matched;
   unmatched1Global = unmatched1;
   unmatched2Global = unmatched2;
+}
 
 function displayResults(matched, unmatched1, unmatched2) {
   const resultsDiv = document.getElementById("results");
-  resultsDiv.innerHTML = "<h2>Results</h2>";
 
-  const table = document.createElement("table");
-  table.style.width = "100%";
-  table.style.borderCollapse = "collapse";
+  resultsDiv.innerHTML += `
+    <h3>Matched (${matched.length})</h3>
+    <ul>${matched.map(m => `<li>${JSON.stringify(m)}</li>`).join("")}</ul>
 
-  function createRow(index, item, type = "") {
-    const tr = document.createElement("tr");
-    const tdIndex = document.createElement("td");
-    tdIndex.textContent = index;
-    tdIndex.style.fontWeight = "bold";
-    tdIndex.style.background = "#f0f0f0";
-    tdIndex.style.width = "50px";
+    <h3>Unmatched in File 1 (${unmatched1.length})</h3>
+    <ul>${unmatched1.map(u => `<li>${JSON.stringify(u)}</li>`).join("")}</ul>
 
-    const tdItem = document.createElement("td");
-    tdItem.textContent = JSON.stringify(item);
-    if (type === "unmatched") {
-      tdItem.style.backgroundColor = "#ffe6e6"; // Light red
-    }
+    <h3>Unmatched in File 2 (${unmatched2.length})</h3>
+    <ul>${unmatched2.map(u => `<li>${JSON.stringify(u)}</li>`).join("")}</ul>
 
-    tr.appendChild(tdIndex);
-    tr.appendChild(tdItem);
-    return tr;
-  }
-
-  // Matched Items
-  const matchedHeader = document.createElement("tr");
-  const mh = document.createElement("th");
-  mh.colSpan = 2;
-  mh.textContent = `Matched (${matched.length})`;
-  mh.style.background = "#d4f4dd";
-  mh.style.textAlign = "left";
-  matchedHeader.appendChild(mh);
-  table.appendChild(matchedHeader);
-
-  matched.forEach((item, i) => table.appendChild(createRow(i + 1, item)));
-
-  // Unmatched File 1
-  const unmatched1Header = document.createElement("tr");
-  const uh1 = document.createElement("th");
-  uh1.colSpan = 2;
-  uh1.textContent = `Unmatched in File 1 (${unmatched1.length})`;
-  uh1.style.background = "#f8d7da";
-  uh1.style.textAlign = "left";
-  unmatched1Header.appendChild(uh1);
-  table.appendChild(unmatched1Header);
-
-  unmatched1.forEach((item, i) => table.appendChild(createRow(i + 1, item, "unmatched")));
-
-  // Unmatched File 2
-  const unmatched2Header = document.createElement("tr");
-  const uh2 = document.createElement("th");
-  uh2.colSpan = 2;
-  uh2.textContent = `Unmatched in File 2 (${unmatched2.length})`;
-  uh2.style.background = "#f8d7da";
-  uh2.style.textAlign = "left";
-  unmatched2Header.appendChild(uh2);
-  table.appendChild(unmatched2Header);
-
-  unmatched2.forEach((item, i) => table.appendChild(createRow(i + 1, item, "unmatched")));
-
-  resultsDiv.appendChild(table);
-
-  // Buttons
-  resultsDiv.insertAdjacentHTML("beforeend", `
     <label for="downloadFormat">Download Format:</label>
     <select id="downloadFormat">
       <option value="xlsx">Excel (.xlsx)</option>
@@ -208,12 +148,11 @@ function displayResults(matched, unmatched1, unmatched2) {
     </select>
     <button onclick="downloadReport()">Download Report</button>
     <button onclick="clearLogs()">Clear Logs</button>
-  `);
+  `;
 }
 
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
-
   const wb = XLSX.utils.book_new();
 
   function exportSheet(data, sheetName) {
@@ -241,5 +180,11 @@ function downloadReport() {
     XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
   }
 
-  clearLogs(); // Auto-clear logs after download
+  clearLogs();
+}
+
+function clearLogs() {
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("progressBar").value = 0;
+  document.getElementById("progressText").textContent = "";
 }
