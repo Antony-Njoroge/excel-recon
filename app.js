@@ -120,7 +120,10 @@ function matchData(primaryField, secondaryField) {
 
   for (const key in map1) {
     unmatched1.push(...map1[key]);
-  }
+  } // 👇 Add this before closing the function
+  matchedDataGlobal = matched;
+  unmatched1Global = unmatched1;
+  unmatched2Global = unmatched2;
 
   displayResults(matched, unmatched1, unmatched2);
 }
@@ -165,6 +168,4 @@ function clearLogs() {
   document.getElementById("results").innerHTML = "";
   document.getElementById("progressBar").value = 0;
 }
-matchedDataGlobal = matched;
-unmatched1Global = unmatched1;
-unmatched2Global = unmatched2;
+
