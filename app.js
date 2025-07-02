@@ -203,22 +203,34 @@ function displayResults(matched, unmatched1, unmatched2) {
 }
 
 function downloadReport() {
+  const format = document.getElementById("downloadFormat").value;
+
   const wb = XLSX.utils.book_new();
 
-  const matchedWS = XLSX.utils.aoa_to_sheet([["Matched Items"]]);
-  XLSX.utils.book_append_sheet(wb, matchedWS, "Reconciled");
+  function exportSheet(data, sheetName) {
+    if (data.length === 0) {
+      const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      return;
+    }
 
-  const unmatched1WS = XLSX.utils.aoa_to_sheet([["Outstanding in File 1"]]);
-  XLSX.utils.book_append_sheet(wb, unmatched1WS, "Outstanding File 1");
+    if (format === "xlsx") {
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    } else if (format === "csv") {
+      const csv = Papa.unparse(data);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `${sheetName}.csv`);
+    }
+  }
 
-  const unmatched2WS = XLSX.utils.aoa_to_sheet([["Outstanding in File 2"]]);
-  XLSX.utils.book_append_sheet(wb, unmatched2WS, "Outstanding File 2");
+  exportSheet(matchedDataGlobal, "Reconciled");
+  exportSheet(unmatched1Global, "Outstanding File 1");
+  exportSheet(unmatched2Global, "Outstanding File 2");
 
-  XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
+  if (format === "xlsx") {
+    XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
+  }
+
+  clearLogs(); // Auto-clear logs after download
 }
-
-function clearLogs() {
-  document.getElementById("results").innerHTML = "";
-  document.getElementById("progressBar").value = 0;
-}
-
