@@ -236,4 +236,15 @@ function clearLogs() {
   document.getElementById("results").innerHTML = "";
   document.getElementById("progressBar").value = 0;
   document.getElementById("progressText").textContent = "";
+
+  // Reset file inputs
+  document.getElementById("file1").value = "";
+  document.getElementById("file2").value = "";
+
+  // Reset global arrays
+  data1 = [];
+  data2 = [];
+  matchedDataGlobal = [];
+  unmatched1Global = [];
+  unmatched2Global = [];
 }
