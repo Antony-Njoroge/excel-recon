@@ -3,6 +3,7 @@ let data2 = [];
 let matchedDataGlobal = [];
 let unmatched1Global = [];
 let unmatched2Global = [];
+let uploadedFileNames = { file1Name: "", file2Name: "" }; // Track uploaded file names
 
 function reconcile() {
   const fileInput1 = document.getElementById("file1");
@@ -17,6 +18,14 @@ function reconcile() {
     alert("Please select both files and enter a primary identifier.");
     return;
   }
+
+  // Save file names globally
+  window.uploadedFileNames = {
+    file1Name: file1.name,
+    file2Name: file2.name
+  };
+
+  // ... rest of function remains unchanged ...
 
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
@@ -203,20 +212,38 @@ function displayResults(matched, unmatched1, unmatched2) {
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
   const wb = XLSX.utils.book_new();
+  const { file1Name, file2Name } = uploadedFileNames;
 
   function exportSheet(data, sheetName) {
     if (data.length === 0) {
-      const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
+      const ws = XLSX.utils.aoa_to_sheet([
+        [`No data available for ${sheetName}`],
+        [],
+        ["Document 1:", file1Name],
+        ["Document 2:", file2Name]
+      ]);
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
       return;
     }
 
+    let csvOrJsonData = [...data];
+
     if (format === "xlsx") {
-      const ws = XLSX.utils.json_to_sheet(data);
+      const ws = XLSX.utils.json_to_sheet(csvOrJsonData, {
+        skipHeader: false
+      });
+
+      // Add header row for file names
+      XLSX.utils.sheet_add_aoa(ws, [["Uploaded Files", ""]], { origin: "A1" });
+      XLSX.utils.sheet_add_aoa(ws, [["Document 1:", file1Name]], { origin: "A2" });
+      XLSX.utils.sheet_add_aoa(ws, [["Document 2:", file2Name]], { origin: "A3" });
+
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     } else if (format === "csv") {
       const csv = Papa.unparse(data);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([
+        `Document 1: ${file1Name}\nDocument 2: ${file2Name}\n\n${csv}`
+      ], { type: 'text/csv;charset=utf-8;' });
       saveAs(blob, `${sheetName}.csv`);
     }
   }
