@@ -25,8 +25,20 @@
     <progress id="progressBar" value="0" max="100"></progress>
     <p id="progressText"></p>
 
-    <div id="results"></div>
-  </div>
+    <div id="results">
+  <h2>Results</h2>
+
+  <!-- Download Format Selector -->
+  <label for="downloadFormat">Download Format:</label>
+  <select id="downloadFormat">
+    <option value="xlsx">Excel (.xlsx)</option>
+    <option value="csv">CSV (.csv)</option>
+  </select>
+  <button onclick="downloadReport()">Download Report</button>
+
+  <!-- Clear Logs Button -->
+  <button onclick="clearLogs()">Clear Logs</button>
+</div>
 
   <!-- Dependencies -->
 <!-- CSV Parser -->
