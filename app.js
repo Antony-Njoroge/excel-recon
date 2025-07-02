@@ -1,5 +1,3 @@
-let data1 = [];
-let data2 = [];
 let matchedDataGlobal = [];
 let unmatched1Global = [];
 let unmatched2Global = [];
@@ -8,7 +6,6 @@ let uploadedFileNames = {
   file1Name: "",
   file2Name: ""
 };
-
 // Normalize phone numbers for matching
 function normalizePhoneNumber(phone) {
   if (!phone) return "";
@@ -219,8 +216,8 @@ function displayResults(matched, unmatched1, unmatched2) {
 }
 
 function downloadReport() {
+function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
-  const { file1Name, file2Name } = uploadedFileNames;
 
   // Ensure data exists
   if (!matchedDataGlobal || !unmatched1Global || !unmatched2Global) {
@@ -253,9 +250,9 @@ function downloadReport() {
       // Set column widths
       ws['!cols'] = Object.keys(stringifiedData[0]).map(() => ({ wch: 20 }));
 
-      // Add tab color
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
+      // Apply tab color
       if (!wb.Workbook) wb.Workbook = { Sheets: [] };
       wb.Workbook.Sheets.push({
         name: sheetName,
@@ -264,9 +261,9 @@ function downloadReport() {
       });
     }
 
-    addSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Green
-    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Red
-    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
+    addSheet(matchedDataGlobal, "Reconciled", "C8E6C9"); // Green
+    addSheet(unmatched1Global, "Outstanding File 1", "FFCDD2"); // Red
+    addSheet(unmatched2Global, "Outstanding File 2", "FFCDD2"); // Red
 
     try {
       XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
