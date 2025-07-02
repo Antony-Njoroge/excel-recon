@@ -150,37 +150,73 @@ function displayResults(matched, unmatched1, unmatched2) {
     <button onclick="clearLogs()">Clear Logs</button>
   `;
 }
-
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
-  const wb = XLSX.utils.book_new();
+  const { file1Name, file2Name } = uploadedFileNames;
 
-  function exportSheet(data, sheetName) {
-    if (data.length === 0) {
-      const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-      return;
-    }
-
-    if (format === "xlsx") {
-      const ws = XLSX.utils.json_to_sheet(data);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    } else if (format === "csv") {
-      const csv = Papa.unparse(data);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      saveAs(blob, `${sheetName}.csv`);
-    }
+  // Validate data
+  if (!matchedDataGlobal || !unmatched1Global || !unmatched2Global) {
+    alert("No data available. Please reconcile files first.");
+    return;
   }
-
-  exportSheet(matchedDataGlobal, "Reconciled");
-  exportSheet(unmatched1Global, "Outstanding File 1");
-  exportSheet(unmatched2Global, "Outstanding File 2");
 
   if (format === "xlsx") {
-    XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
+    const wb = XLSX.utils.book_new();
+
+    function addSheet(data, sheetName, colorHex = "#FFFFFF") {
+      let ws;
+      if (!data || data.length === 0) {
+        ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
+      } else {
+        ws = XLSX.utils.json_to_sheet(data);
+      }
+
+      // Apply tab color
+      if (wb.Sheets[sheetName]) delete wb.Sheets[sheetName]; // Avoid duplicates
+      wb.SheetNames.push(sheetName);
+      ws['!cols'] = [{ wch: 20 }, { wch: 30 }];
+
+      // Set tab color
+      wb.Sheets[sheetName] = ws;
+      if (!wb.Workbook) wb.Workbook = { Sheets: [] };
+      wb.Workbook.Sheets.push({
+        name: sheetName,
+        color: `#${colorHex}`, // Set tab color
+        hidden: false
+      });
+    }
+
+    // Add sheets
+    addSheet(matchedDataGlobal, `Reconciled`, "C8E6C9"); // Light green
+    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2"); // Light red
+    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2"); // Light red
+
+    // Trigger download
+    XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+
+  } else if (format === "csv") {
+    const zip = new JSZip();
+    const csvFolder = zip.folder("Reconciliation_CSV");
+
+    function addCSV(data, filename) {
+      if (!data || data.length === 0) {
+        csvFolder.file(`${filename}.csv`, `No data available`);
+        return;
+      }
+      const csv = Papa.unparse(data);
+      csvFolder.file(`${filename}.csv`, csv);
+    }
+
+    addCSV(matchedDataGlobal, `Reconciled_Items`);
+    addCSV(unmatched1Global, `Outstanding_File1_${file1Name}`);
+    addCSV(unmatched2Global, `Outstanding_File2_${file2Name}`);
+
+    zip.generateAsync({ type: "blob" }).then(function (content) {
+      saveAs(content, "Reconciliation_Report_CSV.zip");
+    });
   }
 
-  clearLogs();
+  clearLogs(); // Optional: Clear logs after download
 }
 
 function clearLogs() {
