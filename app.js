@@ -208,18 +208,16 @@ function downloadReport() {
   if (format === "xlsx") {
     const wb = XLSX.utils.book_new();
 
-    function addSheet(data, sheetName, colorHex = "#FFFFFF") {
-      const stringifiedData = data.map(row => {
+    function addSheet(data, sheetName, colorHex = "FFFFFF") {
+      const ws = XLSX.utils.json_to_sheet(data.map(row => {
         const newRow = {};
         for (let key in row) {
           const value = row[key];
           newRow[key] = typeof value === 'number' ? String(value) : value;
         }
         return newRow;
-      });
-
-      const ws = XLSX.utils.json_to_sheet(stringifiedData);
-      ws['!cols'] = Object.keys(stringifiedData[0]).map(() => ({ wch: 20 }));
+      }));
+      ws['!cols'] = Object.keys(data[0]).map(() => ({ wch: 20 }));
 
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
@@ -235,7 +233,12 @@ function downloadReport() {
     addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Red
     addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
 
-    XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+    try {
+      XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+    } catch (e) {
+      console.error("Failed to generate Excel file:", e);
+      alert("Error generating Excel file. See console for details.");
+    }
 
   } else if (format === "csv") {
     const zip = new JSZip();
@@ -259,7 +262,7 @@ function downloadReport() {
     });
   }
 
-  clearLogs();
+  clearLogs(); // Optional: Clear logs after download
 }
 
 function clearLogs() {
