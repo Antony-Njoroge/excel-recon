@@ -31,8 +31,8 @@
     <input type="text" id="secondaryField" placeholder="e.g., Amount"/><br/><br/>
 
     <button onclick="reconcile()">Reconcile Files</button>
-    <progress id="progressBar" value="0" max="100" style="width: 100%; height: 24px; display: block;"></progress><br/><br/>
-
+    <progress id="progressBar" value="0" max="100" style="width: 100%; height: 24px; display: none;"></progress>
+    <p id="progressText" style="margin-top: 10px;"></p>
     <div id="results">
   <h2>Results</h2>
   <label for="downloadFormat">Download Format:</label>
