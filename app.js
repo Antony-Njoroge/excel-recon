@@ -5,6 +5,9 @@ let unmatched1Global = [];
 let unmatched2Global = [];
 
 function reconcile() {
+  console.log("File 1:", file1.name);
+  console.log("File 2:", file2.name);
+  console.log("Primary Field:", primaryField);
   const fileInput1 = document.getElementById("file1");
   const fileInput2 = document.getElementById("file2");
   const primaryField = document.getElementById("primaryField").value.trim();
@@ -33,6 +36,7 @@ function reconcile() {
     progressBar.value = 10;
 
     parseFile(file1, 1, () => {
+      console.log("Parsed File", id, "Data Sample:", data.slice(0, 2));
       progressText.textContent = "📄 Loaded first file. Loading second file...";
       progressBar.value = 40;
 
