@@ -135,7 +135,7 @@ function displayResults(matched, unmatched1, unmatched2) {
   resultsDiv.innerHTML = "<h2>Results</h2>";
 
   // Helper to create a styled table
-  function createTable(data, title, limit = 10, headerColor = "#d4f4dd") {
+  function createTable(data, title, limit = 5, headerColor = "#d4f4dd") {
     const limitedData = data.slice(0, limit);
     const table = document.createElement("table");
     table.style.borderCollapse = "collapse";
@@ -177,15 +177,15 @@ function displayResults(matched, unmatched1, unmatched2) {
   }
 
   // Reconciled Items (Green Header)
-  const matchedTable = createTable(matched, "Reconciled", 10, "#c8e6c9");
+  const matchedTable = createTable(matched, "Reconciled", 5, "#c8e6c9");
   resultsDiv.appendChild(matchedTable);
 
   // Unmatched File 1 (Red Header)
-  const unmatched1Table = createTable(unmatched1, "Outstanding in File 1", 10, "#ffcdd2");
+  const unmatched1Table = createTable(unmatched1, "Outstanding in File 1", 5, "#ffcdd2");
   resultsDiv.appendChild(unmatched1Table);
 
   // Unmatched File 2 (Red Header)
-  const unmatched2Table = createTable(unmatched2, "Outstanding in File 2", 10, "#ffcdd2");
+  const unmatched2Table = createTable(unmatched2, "Outstanding in File 2", 5, "#ffcdd2");
   resultsDiv.appendChild(unmatched2Table);
 
   // Buttons
