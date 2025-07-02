@@ -218,45 +218,75 @@ function displayResults(matched, unmatched1, unmatched2) {
 
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
-
-  if (!matchedDataGlobal || !unmatched1Global || !unmatched2Global) {
-    alert("No data available. Please reconcile files first.");
-    return;
-  }
+  const { file1Name, file2Name } = uploadedFileNames;
 
   if (format === "xlsx") {
     const wb = XLSX.utils.book_new();
 
     function addSheet(data, sheetName, colorHex = "#FFFFFF") {
-      let ws;
       if (!data || data.length === 0) {
-        ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
-      } else {
-        ws = XLSX.utils.json_to_sheet(data);
+        const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        return;
       }
 
-      // Apply column width
-      ws['!cols'] = [{ wch: 20 }, { wch: 30 }];
+      // Convert all fields to strings to avoid number formatting
+      const stringifiedData = data.map(row => {
+        const newRow = {};
+        for (let key in row) {
+          const value = row[key];
+
+          // Force string format for potential large numbers
+          if (typeof value === 'number' && !key.toLowerCase().includes('amount')) {
+            newRow[key] = String(value);
+          } else {
+            newRow[key] = value;
+          }
+        }
+        return newRow;
+      });
+
+      const ws = XLSX.utils.json_to_sheet(stringifiedData);
+
+      // Set column widths and styles
+      ws['!cols'] = Object.keys(stringifiedData[0]).map(() => ({ wch: 20 }));
+
+      // Apply tab color
+      if (ws["A1"]) {
+        ws["A1"].s = {
+          fill: { fgColor: { rgb: colorHex.replace("#", "") + "FF" } }
+        };
+      }
 
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
-
-      // Optional: Set tab color
-      if (!wb.Workbook) wb.Workbook = { Sheets: [] };
-      wb.Workbook.Sheets.push({
-        name: sheetName,
-        color: `#${colorHex}`,
-        hidden: false
-      });
     }
 
-    addSheet(matchedDataGlobal, "Reconciled", "C8E6C9"); // Green
-    addSheet(unmatched1Global, "Outstanding File 1", "FFCDD2"); // Red
-    addSheet(unmatched2Global, "Outstanding File 2", "FFCDD2"); // Red
+    addSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Green
+    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Red
+    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
 
-    XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
-
+    XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
   } else if (format === "csv") {
-    // CSV code remains unchanged
+    const zip = new JSZip();
+    const csvFolder = zip.folder("Reconciliation_CSV");
+
+    function addCSV(data, filename) {
+      if (!data || data.length === 0) {
+        csvFolder.file(`${filename}.csv`, `No data available`);
+        return;
+      }
+
+      const csv = Papa.unparse(data);
+      csvFolder.file(`${filename}.csv`, csv);
+    }
+
+    addCSV(matchedDataGlobal, `Reconciled-${file1Name}-${file2Name}`);
+    addCSV(unmatched1Global, `Outstanding-File1-${file1Name}`);
+    addCSV(unmatched2Global, `Outstanding-File2-${file2Name}`);
+
+    zip.generateAsync({ type: "blob" }).then(function (content) {
+      saveAs(content, "Reconciliation_Report_CSV.zip");
+    });
   }
 
   clearLogs();
