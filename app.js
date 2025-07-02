@@ -23,6 +23,9 @@ function reconcile() {
     return;
   }
 
+  // ... rest of your reconciliation logic ...
+}
+
   uploadedFileNames.file1Name = file1.name;
   uploadedFileNames.file2Name = file2.name;
 
