@@ -95,42 +95,54 @@ function parseFile(file, id, callback) {
   }
 }
 
-function matchData(primaryField, secondaryField) {
+function matchData(primaryField, secondaryField = "") {
   const map1 = {};
   const matched = [];
   const unmatched1 = [];
   const unmatched2 = [];
 
+  // Build map of file 1 data by primary identifier
   for (const row of data1) {
     const key = row[primaryField];
     if (!map1[key]) map1[key] = [];
     map1[key].push(row);
   }
 
+  // Match with file 2
   for (const row of data2) {
     const key = row[primaryField];
-    if (map1[key]) {
+
+    if (map1[key] && map1[key].length > 0) {
+      let match;
+
+      // If secondary field provided, use it for exact match
       if (secondaryField && row[secondaryField]) {
-        const match = map1[key].find(r => r[secondaryField] === row[secondaryField]);
-        if (match) {
-          matched.push({ ...row, MatchedTo: JSON.stringify(match) });
-          map1[key] = map1[key].filter(r => r !== match);
-        } else {
-          unmatched2.push(row);
-        }
+        match = map1[key].find(r => r[secondaryField] === row[secondaryField]);
       } else {
-        matched.push({ ...row, MatchedTo: JSON.stringify(map1[key][0]) });
-        map1[key].shift();
+        match = map1[key][0]; // Fallback: First available match
+      }
+
+      if (match) {
+        matched.push({
+          ...row,
+          MatchedTo: JSON.stringify(match)
+        });
+        // Remove matched item from pool
+        map1[key] = map1[key].filter(r => r !== match);
+      } else {
+        unmatched2.push(row); // No secondary match found
       }
     } else {
-      unmatched2.push(row);
+      unmatched2.push(row); // No primary match found
     }
   }
 
+  // Remaining in file 1 are unmatched
   for (const key in map1) {
     unmatched1.push(...map1[key]);
   }
 
+  // Save globally for display/download
   matchedDataGlobal = matched;
   unmatched1Global = unmatched1;
   unmatched2Global = unmatched2;
