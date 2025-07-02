@@ -138,7 +138,9 @@ function matchData(primaryField, secondaryField) {
 
 function displayResults(matched, unmatched1, unmatched2) {
   const resultsDiv = document.getElementById("results");
+  resultsDiv.innerHTML = "<h3>Preview (Top 5 Items)</h3>";
 
+  // Helper to create a styled table with limited rows
   function createTable(data, title, limit = 5, headerColor = "#d4f4dd") {
     const limitedData = data.slice(0, limit);
     const table = document.createElement("table");
@@ -146,7 +148,7 @@ function displayResults(matched, unmatched1, unmatched2) {
     table.style.borderCollapse = "collapse";
     table.style.marginBottom = "20px";
 
-    // Header
+    // Header row
     const headerRow = document.createElement("tr");
     const headerCell = document.createElement("th");
     headerCell.colSpan = 2;
@@ -157,7 +159,7 @@ function displayResults(matched, unmatched1, unmatched2) {
     headerRow.appendChild(headerCell);
     table.appendChild(headerRow);
 
-    // Body
+    // Data rows
     limitedData.forEach((item, index) => {
       const tr = document.createElement("tr");
 
@@ -178,12 +180,12 @@ function displayResults(matched, unmatched1, unmatched2) {
     return table;
   }
 
-  resultsDiv.innerHTML = "<h3>Preview (Top 5 Items)</h3>";
+  // Show top 5 items per category
+  resultsDiv.appendChild(createTable(matched, "Reconciled", 5, "#c8e6c9")); // Green
+  resultsDiv.appendChild(createTable(unmatched1, "Outstanding in File 1", 5, "#ffcdd2")); // Red
+  resultsDiv.appendChild(createTable(unmatched2, "Outstanding in File 2", 5, "#ffcdd2")); // Red
 
-  resultsDiv.appendChild(createTable(matched, "Reconciled", 5, "#c8e6c9"));
-  resultsDiv.appendChild(createTable(unmatched1, "Outstanding in File 1", 5, "#ffcdd2"));
-  resultsDiv.appendChild(createTable(unmatched2, "Outstanding in File 2", 5, "#ffcdd2"));
-
+  // Add download controls
   resultsDiv.insertAdjacentHTML("beforeend", `
     <label for="downloadFormat">Download Format:</label>
     <select id="downloadFormat">
@@ -194,7 +196,6 @@ function displayResults(matched, unmatched1, unmatched2) {
     <button onclick="clearLogs()">Clear Logs</button>
   `);
 }
-
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
   const { file1Name, file2Name } = uploadedFileNames;
