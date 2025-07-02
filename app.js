@@ -3,7 +3,11 @@ let data2 = [];
 let matchedDataGlobal = [];
 let unmatched1Global = [];
 let unmatched2Global = [];
-let uploadedFileNames = { file1Name: "", file2Name: "" }; // Track uploaded file names
+
+let uploadedFileNames = {
+  file1Name: "",
+  file2Name: ""
+};
 
 function reconcile() {
   const fileInput1 = document.getElementById("file1");
@@ -11,8 +15,11 @@ function reconcile() {
   const primaryField = document.getElementById("primaryField").value.trim();
   const secondaryField = document.getElementById("secondaryField").value.trim();
 
-  const file1 = fileInput1.files[0];
-  const file2 = fileInput2.files[0];
+const file1 = fileInput1.files[0];
+const file2 = fileInput2.files[0];
+
+uploadedFileNames.file1Name = file1.name;
+uploadedFileNames.file2Name = file2.name;
 
   if (!file1 || !file2 || !primaryField) {
     alert("Please select both files and enter a primary identifier.");
@@ -214,43 +221,42 @@ function downloadReport() {
   const wb = XLSX.utils.book_new();
   const { file1Name, file2Name } = uploadedFileNames;
 
-  function exportSheet(data, sheetName) {
-    if (data.length === 0) {
-      const ws = XLSX.utils.aoa_to_sheet([
-        [`No data available for ${sheetName}`],
-        [],
+  function exportSheet(data, sheetName, color = "#FFFFFF") {
+    let ws;
+
+    if (format === "xlsx") {
+      // Create styled header rows
+      const headerRows = [
+        ["Uploaded Files"],
         ["Document 1:", file1Name],
-        ["Document 2:", file2Name]
-      ]);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        ["Document 2:", file2Name],
+        [] // Empty row before data
+      ];
+
+      // Convert data to worksheet
+      ws = XLSX.utils.json_to_sheet(data, { origin: "A5" });
+      XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: "A1" });
+
+      // Apply background color to header
+      ws["A1"].s = { fill: { fgColor: { rgb: color.replace("#", "") + "FF" } } };
+      ws["!cols"] = [{ wch: 20 }, { wch: 30 }];
+    } else {
+      // CSV fallback
+      const csv = Papa.unparse(data);
+      const blob = new Blob([
+        `Uploaded Files\nDocument 1: ${file1Name}\nDocument 2: ${file2Name}\n\n${csv}`
+      ], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `${sheetName}.csv`);
       return;
     }
 
-    let csvOrJsonData = [...data];
-
-    if (format === "xlsx") {
-      const ws = XLSX.utils.json_to_sheet(csvOrJsonData, {
-        skipHeader: false
-      });
-
-      // Add header row for file names
-      XLSX.utils.sheet_add_aoa(ws, [["Uploaded Files", ""]], { origin: "A1" });
-      XLSX.utils.sheet_add_aoa(ws, [["Document 1:", file1Name]], { origin: "A2" });
-      XLSX.utils.sheet_add_aoa(ws, [["Document 2:", file2Name]], { origin: "A3" });
-
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    } else if (format === "csv") {
-      const csv = Papa.unparse(data);
-      const blob = new Blob([
-        `Document 1: ${file1Name}\nDocument 2: ${file2Name}\n\n${csv}`
-      ], { type: 'text/csv;charset=utf-8;' });
-      saveAs(blob, `${sheetName}.csv`);
-    }
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
   }
 
-  exportSheet(matchedDataGlobal, "Reconciled");
-  exportSheet(unmatched1Global, "Outstanding File 1");
-  exportSheet(unmatched2Global, "Outstanding File 2");
+  // Export sheets with colors
+  exportSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Light green
+  exportSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Light red
+  exportSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Light red
 
   if (format === "xlsx") {
     XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
@@ -258,7 +264,6 @@ function downloadReport() {
 
   clearLogs();
 }
-
 function clearLogs() {
   document.getElementById("results").innerHTML = "";
   document.getElementById("progressBar").value = 0;
