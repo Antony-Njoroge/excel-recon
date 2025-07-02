@@ -20,27 +20,32 @@ function reconcile() {
 
   // Reset UI
   const progressBar = document.getElementById("progressBar");
+  const progressText = document.getElementById("progressText");
   const resultsDiv = document.getElementById("results");
 
-  progressBar.style.display = 'block'; // Make sure it's visible
-  progressBar.value = 10;
-
-  resultsDiv.innerHTML = "<p>⏳ Loading first file...</p>";
+  progressBar.style.display = 'block';
+  progressBar.value = 0;
+  progressText.textContent = "Starting...";
+  resultsDiv.innerHTML = ""; // Clear old results
 
   setTimeout(() => {
+    progressText.textContent = "⏳ Loading first file...";
+    progressBar.value = 10;
+
     parseFile(file1, 1, () => {
+      progressText.textContent = "📄 Loaded first file. Loading second file...";
       progressBar.value = 40;
-      resultsDiv.innerHTML += "<p>📄 Loaded first file. Loading second file...</p>";
 
       setTimeout(() => {
         parseFile(file2, 2, () => {
+          progressText.textContent = "🔍 Matching data...";
           progressBar.value = 70;
-          resultsDiv.innerHTML += "<p>🔍 Matching data...</p>";
 
           setTimeout(() => {
             matchData(primaryField, secondaryField);
             progressBar.value = 100;
-            resultsDiv.innerHTML = "<p>✅ Matching complete!</p>";
+            progressText.textContent = "✅ Matching complete!";
+
             displayResults(matchedDataGlobal, unmatched1Global, unmatched2Global);
           }, 200);
         });
