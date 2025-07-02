@@ -4,22 +4,14 @@ let matchedDataGlobal = [];
 let unmatched1Global = [];
 let unmatched2Global = [];
 
-let uploadedFileNames = {
-  file1Name: "",
-  file2Name: ""
-};
-
 function reconcile() {
   const fileInput1 = document.getElementById("file1");
   const fileInput2 = document.getElementById("file2");
   const primaryField = document.getElementById("primaryField").value.trim();
   const secondaryField = document.getElementById("secondaryField").value.trim();
 
-const file1 = fileInput1.files[0];
-const file2 = fileInput2.files[0];
-
-uploadedFileNames.file1Name = file1.name;
-uploadedFileNames.file2Name = file2.name;
+  const file1 = fileInput1.files[0];
+  const file2 = fileInput2.files[0];
 
   if (!file1 || !file2 || !primaryField) {
     alert("Please select both files and enter a primary identifier.");
@@ -158,88 +150,39 @@ function displayResults(matched, unmatched1, unmatched2) {
     <button onclick="clearLogs()">Clear Logs</button>
   `;
 }
+
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
+  const wb = XLSX.utils.book_new();
 
-  // Ensure data exists
-  if (!matchedDataGlobal || !unmatched1Global || !unmatched2Global) {
-    alert("No data available. Please reconcile files first.");
-    return;
+  function exportSheet(data, sheetName) {
+    if (data.length === 0) {
+      const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      return;
+    }
+
+    if (format === "xlsx") {
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    } else if (format === "csv") {
+      const csv = Papa.unparse(data);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `${sheetName}.csv`);
+    }
   }
+
+  exportSheet(matchedDataGlobal, "Reconciled");
+  exportSheet(unmatched1Global, "Outstanding File 1");
+  exportSheet(unmatched2Global, "Outstanding File 2");
 
   if (format === "xlsx") {
-    const wb = XLSX.utils.book_new();
-
-    function addSheet(data, sheetName, colorHex = "#FFFFFF") {
-      let ws;
-      if (!data || data.length === 0) {
-        ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
-      } else {
-        // Convert all values to strings to avoid scientific notation
-        const stringifiedData = data.map(row => {
-          const newRow = {};
-          for (let key in row) {
-            const value = row[key];
-            newRow[key] = typeof value === 'number' ? String(value) : value;
-          }
-          return newRow;
-        });
-
-        ws = XLSX.utils.json_to_sheet(stringifiedData);
-      }
-
-      // Apply column width
-      ws['!cols'] = Object.keys(data[0] || {}).map(() => ({ wch: 20 }));
-
-      // Set tab color
-      if (!wb.Workbook) wb.Workbook = { Sheets: [] };
-      wb.SheetNames.push(sheetName);
-      wb.Sheets[sheetName] = ws;
-
-      wb.Workbook.Sheets.push({
-        name: sheetName,
-        color: `#${colorHex}`,
-        hidden: false
-      });
-    }
-
-    // Add sheets
-    addSheet(matchedDataGlobal, "Reconciled", "C8E6C9"); // Green
-    addSheet(unmatched1Global, "Outstanding File 1", "FFCDD2"); // Red
-    addSheet(unmatched2Global, "Outstanding File 2", "FFCDD2"); // Red
-
-    // Trigger download
-    try {
-      XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
-    } catch (e) {
-      console.error("Failed to generate Excel file:", e);
-      alert("Error generating Excel file. See console for details.");
-    }
-
-  } else if (format === "csv") {
-    const zip = new JSZip();
-    const csvFolder = zip.folder("Reconciliation_CSV");
-
-    function addCSV(data, filename) {
-      if (!data || data.length === 0) {
-        csvFolder.file(`${filename}.csv`, "No data available");
-        return;
-      }
-      const csv = Papa.unparse(data);
-      csvFolder.file(`${filename}.csv`, csv);
-    }
-
-    addCSV(matchedDataGlobal, "Reconciled_Items");
-    addCSV(unmatched1Global, "Outstanding_File1");
-    addCSV(unmatched2Global, "Outstanding_File2");
-
-    zip.generateAsync({ type: "blob" }).then(function (content) {
-      saveAs(content, "Reconciliation_Report_CSV.zip");
-    });
+    XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
   }
 
-  clearLogs(); // Optional: Clear logs after download
+  clearLogs();
 }
+
 function clearLogs() {
   document.getElementById("results").innerHTML = "";
   document.getElementById("progressBar").value = 0;
