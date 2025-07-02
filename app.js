@@ -215,7 +215,6 @@ function displayResults(matched, unmatched1, unmatched2) {
     <button onclick="clearLogs()">Clear Logs & Uploads</button>
   `);
 }
-
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
   const wb = XLSX.utils.book_new();
@@ -224,39 +223,29 @@ function downloadReport() {
   function exportSheet(data, sheetName, color = "#FFFFFF") {
     let ws;
 
-    if (format === "xlsx") {
-      // Create styled header rows
-      const headerRows = [
-        ["Uploaded Files"],
-        ["Document 1:", file1Name],
-        ["Document 2:", file2Name],
-        [] // Empty row before data
-      ];
-
-      // Convert data to worksheet
-      ws = XLSX.utils.json_to_sheet(data, { origin: "A5" });
-      XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: "A1" });
-
-      // Apply background color to header
-      ws["A1"].s = { fill: { fgColor: { rgb: color.replace("#", "") + "FF" } } };
-      ws["!cols"] = [{ wch: 20 }, { wch: 30 }];
+    if (data.length === 0) {
+      // Optional: Add placeholder if no data
+      ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
     } else {
-      // CSV fallback
-      const csv = Papa.unparse(data);
-      const blob = new Blob([
-        `Uploaded Files\nDocument 1: ${file1Name}\nDocument 2: ${file2Name}\n\n${csv}`
-      ], { type: 'text/csv;charset=utf-8;' });
-      saveAs(blob, `${sheetName}.csv`);
-      return;
+      ws = XLSX.utils.json_to_sheet(data);
     }
+
+    // Apply styling (color)
+    ws["!cols"] = [{ wch: 20 }, { wch: 30 }];
+    ws["A1"].s = { fill: { fgColor: { rgb: color.replace("#", "") + "FF" } } };
 
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   }
 
-  // Export sheets with colors
-  exportSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Light green
-  exportSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Light red
-  exportSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Light red
+  // Sheet names now include file names
+  const reconciledSheetName = `Reconciled - ${file1Name} & ${file2Name}`;
+  const unmatched1SheetName = `Outstanding File 1 - ${file1Name}`;
+  const unmatched2SheetName = `Outstanding File 2 - ${file2Name}`;
+
+  // Export each dataset as a styled sheet
+  exportSheet(matchedDataGlobal, reconciledSheetName, "C8E6C9"); // Light green
+  exportSheet(unmatched1Global, unmatched1SheetName, "FFCDD2");  // Light red
+  exportSheet(unmatched2Global, unmatched2SheetName, "FFCDD2");  // Light red
 
   if (format === "xlsx") {
     XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
