@@ -160,10 +160,10 @@ function displayResults(matched, unmatched1, unmatched2) {
 }
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
-  const { file1Name, file2Name } = uploadedFileNames;
 
+  // Ensure data exists
   if (!matchedDataGlobal || !unmatched1Global || !unmatched2Global) {
-    alert("No data available to export.");
+    alert("No data available. Please reconcile files first.");
     return;
   }
 
@@ -171,28 +171,31 @@ function downloadReport() {
     const wb = XLSX.utils.book_new();
 
     function addSheet(data, sheetName, colorHex = "#FFFFFF") {
-      // Convert all values to strings to prevent scientific notation
-      const stringifiedData = data.map(row => {
-        const newRow = {};
-        for (let key in row) {
-          let value = row[key];
-          // Force string type for large numbers
-          newRow[key] = (typeof value === 'number' && !key.toLowerCase().includes('amount'))
-            ? String(value)
-            : value;
-        }
-        return newRow;
-      });
+      let ws;
+      if (!data || data.length === 0) {
+        ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
+      } else {
+        // Convert all values to strings to avoid scientific notation
+        const stringifiedData = data.map(row => {
+          const newRow = {};
+          for (let key in row) {
+            const value = row[key];
+            newRow[key] = typeof value === 'number' ? String(value) : value;
+          }
+          return newRow;
+        });
 
-      const ws = XLSX.utils.json_to_sheet(stringifiedData);
+        ws = XLSX.utils.json_to_sheet(stringifiedData);
+      }
 
       // Apply column width
-      ws['!cols'] = Object.keys(stringifiedData[0]).map(() => ({ wch: 20 }));
+      ws['!cols'] = Object.keys(data[0] || {}).map(() => ({ wch: 20 }));
 
       // Set tab color
       if (!wb.Workbook) wb.Workbook = { Sheets: [] };
       wb.SheetNames.push(sheetName);
       wb.Sheets[sheetName] = ws;
+
       wb.Workbook.Sheets.push({
         name: sheetName,
         color: `#${colorHex}`,
@@ -200,17 +203,17 @@ function downloadReport() {
       });
     }
 
-    // Add sheets with color-coded tabs
-    addSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Green
-    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Red
-    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
+    // Add sheets
+    addSheet(matchedDataGlobal, "Reconciled", "C8E6C9"); // Green
+    addSheet(unmatched1Global, "Outstanding File 1", "FFCDD2"); // Red
+    addSheet(unmatched2Global, "Outstanding File 2", "FFCDD2"); // Red
 
-    // Trigger Excel file download
+    // Trigger download
     try {
-      XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+      XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
     } catch (e) {
-      console.error("Excel file write failed:", e);
-      alert("Failed to generate Excel file.");
+      console.error("Failed to generate Excel file:", e);
+      alert("Error generating Excel file. See console for details.");
     }
 
   } else if (format === "csv") {
@@ -226,16 +229,16 @@ function downloadReport() {
       csvFolder.file(`${filename}.csv`, csv);
     }
 
-    addCSV(matchedDataGlobal, `Reconciled-${file1Name}-${file2Name}`);
-    addCSV(unmatched1Global, `Outstanding-File1-${file1Name}`);
-    addCSV(unmatched2Global, `Outstanding-File2-${file2Name}`);
+    addCSV(matchedDataGlobal, "Reconciled_Items");
+    addCSV(unmatched1Global, "Outstanding_File1");
+    addCSV(unmatched2Global, "Outstanding_File2");
 
     zip.generateAsync({ type: "blob" }).then(function (content) {
       saveAs(content, "Reconciliation_Report_CSV.zip");
     });
   }
 
-  clearLogs(); // Clear UI after download
+  clearLogs(); // Optional: Clear logs after download
 }
 function clearLogs() {
   document.getElementById("results").innerHTML = "";
