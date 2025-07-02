@@ -41,6 +41,7 @@ button {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
+  font-size: 14px;
 }
 
 #results th, #results td {
