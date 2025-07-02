@@ -217,38 +217,59 @@ function displayResults(matched, unmatched1, unmatched2) {
 }
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
-  const wb = XLSX.utils.book_new();
   const { file1Name, file2Name } = uploadedFileNames;
 
-  function exportSheet(data, sheetName, color = "#FFFFFF") {
-    let ws;
+  if (format === "xlsx") {
+    const wb = XLSX.utils.book_new();
 
-    if (data.length === 0) {
-      // Optional: Add placeholder if no data
-      ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
-    } else {
-      ws = XLSX.utils.json_to_sheet(data);
+    // Helper to add data to worksheet
+    function addSheet(data, sheetName, color) {
+      if (!data || data.length === 0) {
+        const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(data);
+
+      // Apply header style
+      if (ws['A1']) {
+        ws['A1'].s = {
+          fill: { fgColor: { rgb: color.replace("#", "") + "FF" } }
+        };
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
 
-    // Apply styling (color)
-    ws["!cols"] = [{ wch: 20 }, { wch: 30 }];
-    ws["A1"].s = { fill: { fgColor: { rgb: color.replace("#", "") + "FF" } } };
+    // Add each dataset as a new sheet
+    addSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Green
+    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Red
+    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
 
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  }
+    // Trigger Excel file download
+    XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+  } else if (format === "csv") {
+    // Create ZIP with all CSVs
+    const zip = new JSZip();
+    const csvFolder = zip.folder("Reconciliation_CSV");
 
-  // Sheet names now include file names
-  const reconciledSheetName = `Reconciled - ${file1Name} & ${file2Name}`;
-  const unmatched1SheetName = `Outstanding File 1 - ${file1Name}`;
-  const unmatched2SheetName = `Outstanding File 2 - ${file2Name}`;
+    function addCSV(data, filename) {
+      if (!data || data.length === 0) {
+        csvFolder.file(`${filename}.csv`, `No data available`);
+        return;
+      }
+      const csv = Papa.unparse(data);
+      csvFolder.file(`${filename}.csv`, csv);
+    }
 
-  // Export each dataset as a styled sheet
-  exportSheet(matchedDataGlobal, reconciledSheetName, "C8E6C9"); // Light green
-  exportSheet(unmatched1Global, unmatched1SheetName, "FFCDD2");  // Light red
-  exportSheet(unmatched2Global, unmatched2SheetName, "FFCDD2");  // Light red
+    addCSV(matchedDataGlobal, `Reconciled-${file1Name}-${file2Name}`);
+    addCSV(unmatched1Global, `Outstanding-File1-${file1Name}`);
+    addCSV(unmatched2Global, `Outstanding-File2-${file2Name}`);
 
-  if (format === "xlsx") {
-    XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
+    zip.generateAsync({ type: "blob" }).then(function (content) {
+      saveAs(content, "Reconciliation_Report_CSV.zip");
+    });
   }
 
   clearLogs();
