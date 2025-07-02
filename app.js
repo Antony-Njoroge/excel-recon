@@ -27,6 +27,11 @@ function reconcile() {
     return;
   }
 
+  // If everything is OK, parsing starts here
+  console.log("Reconcile started...");
+  // ... rest of your logic
+}
+
   uploadedFileNames.file1Name = file1.name;
   uploadedFileNames.file2Name = file2.name;
 
