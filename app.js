@@ -125,25 +125,78 @@ function matchData(primaryField, secondaryField) {
   unmatched1Global = unmatched1;
   unmatched2Global = unmatched2;
 
-  displayResults(matched, unmatched1, unmatched2);
-}
-
 function displayResults(matched, unmatched1, unmatched2) {
-  const table = document.createElement("table");
-
-  table.innerHTML = `
-    <tr><th colspan="2">Matched (${matched.length})</th></tr>
-    ${matched.map(m => `<tr><td>${JSON.stringify(m)}</td></tr>`).join("")}
-    <tr><th colspan="2">Unmatched in File 1 (${unmatched1.length})</th></tr>
-    ${unmatched1.map(u => `<tr><td>${JSON.stringify(u)}</td></tr>`).join("")}
-    <tr><th colspan="2">Unmatched in File 2 (${unmatched2.length})</th></tr>
-    ${unmatched2.map(u => `<tr><td>${JSON.stringify(u)}</td></tr>`).join("")}
-  `;
-
   const resultsDiv = document.getElementById("results");
   resultsDiv.innerHTML = "<h2>Results</h2>";
+
+  const table = document.createElement("table");
+  table.style.width = "100%";
+  table.style.borderCollapse = "collapse";
+
+  function createRow(index, item, type = "") {
+    const tr = document.createElement("tr");
+    const tdIndex = document.createElement("td");
+    tdIndex.textContent = index;
+    tdIndex.style.fontWeight = "bold";
+    tdIndex.style.background = "#f0f0f0";
+    tdIndex.style.width = "50px";
+
+    const tdItem = document.createElement("td");
+    tdItem.textContent = JSON.stringify(item);
+    if (type === "unmatched") {
+      tdItem.style.backgroundColor = "#ffe6e6"; // Light red
+    }
+
+    tr.appendChild(tdIndex);
+    tr.appendChild(tdItem);
+    return tr;
+  }
+
+  // Matched Items
+  const matchedHeader = document.createElement("tr");
+  const mh = document.createElement("th");
+  mh.colSpan = 2;
+  mh.textContent = `Matched (${matched.length})`;
+  mh.style.background = "#d4f4dd";
+  mh.style.textAlign = "left";
+  matchedHeader.appendChild(mh);
+  table.appendChild(matchedHeader);
+
+  matched.forEach((item, i) => table.appendChild(createRow(i + 1, item)));
+
+  // Unmatched File 1
+  const unmatched1Header = document.createElement("tr");
+  const uh1 = document.createElement("th");
+  uh1.colSpan = 2;
+  uh1.textContent = `Unmatched in File 1 (${unmatched1.length})`;
+  uh1.style.background = "#f8d7da";
+  uh1.style.textAlign = "left";
+  unmatched1Header.appendChild(uh1);
+  table.appendChild(unmatched1Header);
+
+  unmatched1.forEach((item, i) => table.appendChild(createRow(i + 1, item, "unmatched")));
+
+  // Unmatched File 2
+  const unmatched2Header = document.createElement("tr");
+  const uh2 = document.createElement("th");
+  uh2.colSpan = 2;
+  uh2.textContent = `Unmatched in File 2 (${unmatched2.length})`;
+  uh2.style.background = "#f8d7da";
+  uh2.style.textAlign = "left";
+  unmatched2Header.appendChild(uh2);
+  table.appendChild(unmatched2Header);
+
+  unmatched2.forEach((item, i) => table.appendChild(createRow(i + 1, item, "unmatched")));
+
   resultsDiv.appendChild(table);
+
+  // Buttons
   resultsDiv.insertAdjacentHTML("beforeend", `
+    <label for="downloadFormat">Download Format:</label>
+    <select id="downloadFormat">
+      <option value="xlsx">Excel (.xlsx)</option>
+      <option value="csv">CSV (.csv)</option>
+    </select>
     <button onclick="downloadReport()">Download Report</button>
     <button onclick="clearLogs()">Clear Logs</button>
   `);
