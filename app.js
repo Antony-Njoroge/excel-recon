@@ -230,9 +230,9 @@ function downloadReport() {
       // Set column widths
       ws['!cols'] = Object.keys(stringifiedData[0]).map(() => ({ wch: 20 }));
 
-      // Add tab color
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
+      // Apply tab color
       if (!wb.Workbook) wb.Workbook = { Sheets: [] };
       wb.Workbook.Sheets.push({
         name: sheetName,
@@ -276,7 +276,6 @@ function downloadReport() {
 
   clearLogs(); // Optional: Clear logs after download
 }
-
 function clearLogs() {
   document.getElementById("results").innerHTML = "";
   document.getElementById("progressBar").value = 0;
