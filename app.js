@@ -96,30 +96,61 @@ function parseFile(file, id, callback) {
 }
 
 function matchData(primaryField, secondaryField = "") {
+/**
+ * Normalizes phone numbers by:
+ * - Removing all non-digit characters
+ * - Trimming leading zeros
+ * - Matching last 9 digits (Kenyan example)
+ */
+function normalizePhoneNumber(phone) {
+  if (!phone) return "";
+  const str = String(phone).replace(/\D/g, ''); // Remove all non-digits
+  // For Kenyan numbers: get last 9 digits
+  if (str.length >= 9) {
+    const last9 = str.slice(-9);
+    return last9;
+  }
+  return str; // Fallback
+}
+
+function matchData(primaryField, secondaryField = "") {
   const map1 = {};
   const matched = [];
   const unmatched1 = [];
   const unmatched2 = [];
 
-  // Build map of file 1 data by primary identifier
+  // Build map of file 1 data by normalized phone number
   for (const row of data1) {
-    const key = row[primaryField];
-    if (!map1[key]) map1[key] = [];
-    map1[key].push(row);
+    const rawPhone = row[primaryField];
+    const normalizedPhone = normalizePhoneNumber(rawPhone);
+
+    if (!normalizedPhone) continue;
+
+    if (!map1[normalizedPhone]) map1[normalizedPhone] = [];
+    map1[normalizedPhone].push(row);
   }
 
   // Match with file 2
   for (const row of data2) {
-    const key = row[primaryField];
+    const rawPhone = row[primaryField];
+    const normalizedPhone = normalizePhoneNumber(rawPhone);
 
-    if (map1[key] && map1[key].length > 0) {
+    if (!normalizedPhone) {
+      unmatched2.push(row);
+      continue;
+    }
+
+    const candidates = map1[normalizedPhone];
+
+    if (candidates && candidates.length > 0) {
       let match;
 
       // If secondary field provided, use it for exact match
       if (secondaryField && row[secondaryField]) {
-        match = map1[key].find(r => r[secondaryField] === row[secondaryField]);
+        const targetValue = row[secondaryField];
+        match = candidates.find(r => r[secondaryField] === targetValue);
       } else {
-        match = map1[key][0]; // Fallback: First available match
+        match = candidates[0]; // Fallback: First available match
       }
 
       if (match) {
@@ -128,7 +159,7 @@ function matchData(primaryField, secondaryField = "") {
           MatchedTo: JSON.stringify(match)
         });
         // Remove matched item from pool
-        map1[key] = map1[key].filter(r => r !== match);
+        map1[normalizedPhone] = map1[normalizedPhone].filter(r => r !== match);
       } else {
         unmatched2.push(row); // No secondary match found
       }
