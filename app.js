@@ -217,14 +217,14 @@ function displayResults(matched, unmatched1, unmatched2) {
 }
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
-  const { file1Name, file2Name } = uploadedFileNames;
 
-  if (!file1Name || !file2Name) {
-    alert("No file names detected. Please reconcile files first.");
+  if (!matchedDataGlobal && !unmatched1Global && !unmatched2Global) {
+    alert("No data available to export.");
     return;
   }
 
   if (format === "xlsx") {
+    /* Create worksheet for each dataset */
     const wb = XLSX.utils.book_new();
 
     function addSheet(data, sheetName, colorHex = "#FFFFFF") {
@@ -235,7 +235,7 @@ function downloadReport() {
         ws = XLSX.utils.json_to_sheet(data);
       }
 
-      // Apply background color to header
+      // Apply header background color
       if (ws["A1"]) {
         ws["A1"].s = {
           fill: { fgColor: { rgb: colorHex.replace("#", "") + "FF" } }
@@ -245,11 +245,11 @@ function downloadReport() {
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
 
-    addSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Green
-    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Red
-    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
+    addSheet(matchedDataGlobal, "Reconciled", "C8E6C9"); // Green
+    addSheet(unmatched1Global, "Outstanding File 1", "FFCDD2"); // Red
+    addSheet(unmatched2Global, "Outstanding File 2", "FFCDD2"); // Red
 
-    XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
 
   } else if (format === "csv") {
     const zip = new JSZip();
@@ -257,23 +257,23 @@ function downloadReport() {
 
     function addCSV(data, filename) {
       if (!data || data.length === 0) {
-        csvFolder.file(`${filename}.csv`, `No data available`);
+        csvFolder.file(`${filename}.csv`, "No data available");
         return;
       }
       const csv = Papa.unparse(data);
       csvFolder.file(`${filename}.csv`, csv);
     }
 
-    addCSV(matchedDataGlobal, `Reconciled-${file1Name}-${file2Name}`);
-    addCSV(unmatched1Global, `Outstanding-File1-${file1Name}`);
-    addCSV(unmatched2Global, `Outstanding-File2-${file2Name}`);
+    addCSV(matchedDataGlobal, "Reconciled_Items");
+    addCSV(unmatched1Global, "Outstanding_File1");
+    addCSV(unmatched2Global, "Outstanding_File2");
 
     zip.generateAsync({ type: "blob" }).then(function (content) {
       saveAs(content, "Reconciliation_Report_CSV.zip");
     });
   }
 
-  clearLogs();
+  clearLogs(); // Optional: Clear logs after download
 }
 function clearLogs() {
   document.getElementById("results").innerHTML = "";
