@@ -131,24 +131,73 @@ function matchData(primaryField, secondaryField) {
 function displayResults(matched, unmatched1, unmatched2) {
   const resultsDiv = document.getElementById("results");
 
-  resultsDiv.innerHTML += `
-    <h3>Matched (${matched.length})</h3>
-    <ul>${matched.map(m => `<li>${JSON.stringify(m)}</li>`).join("")}</ul>
+  // Clear previous content
+  resultsDiv.innerHTML = "<h2>Results</h2>";
 
-    <h3>Unmatched in File 1 (${unmatched1.length})</h3>
-    <ul>${unmatched1.map(u => `<li>${JSON.stringify(u)}</li>`).join("")}</ul>
+  // Helper to create a styled table
+  function createTable(data, title, limit = 10, headerColor = "#d4f4dd") {
+    const limitedData = data.slice(0, limit);
+    const table = document.createElement("table");
+    table.style.borderCollapse = "collapse";
+    table.style.width = "100%";
+    table.style.marginBottom = "20px";
 
-    <h3>Unmatched in File 2 (${unmatched2.length})</h3>
-    <ul>${unmatched2.map(u => `<li>${JSON.stringify(u)}</li>`).join("")}</ul>
+    // Header row
+    const thead = document.createElement("thead");
+    const trHead = document.createElement("tr");
+    const th = document.createElement("th");
+    th.colSpan = 2;
+    th.textContent = `${title} (${data.length})`;
+    th.style.background = headerColor;
+    th.style.textAlign = "left";
+    th.style.padding = "10px";
+    trHead.appendChild(th);
+    thead.appendChild(trHead);
+    table.appendChild(thead);
 
+    // Body rows
+    const tbody = document.createElement("tbody");
+    limitedData.forEach((item, index) => {
+      const tr = document.createElement("tr");
+      const tdIndex = document.createElement("td");
+      tdIndex.textContent = index + 1;
+      tdIndex.style.fontWeight = "bold";
+      tdIndex.style.background = "#f0f0f0";
+      tdIndex.style.width = "50px";
+
+      const tdItem = document.createElement("td");
+      tdItem.textContent = JSON.stringify(item);
+      tr.appendChild(tdIndex);
+      tr.appendChild(tdItem);
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    return table;
+  }
+
+  // Reconciled Items (Green Header)
+  const matchedTable = createTable(matched, "Reconciled", 10, "#c8e6c9");
+  resultsDiv.appendChild(matchedTable);
+
+  // Unmatched File 1 (Red Header)
+  const unmatched1Table = createTable(unmatched1, "Outstanding in File 1", 10, "#ffcdd2");
+  resultsDiv.appendChild(unmatched1Table);
+
+  // Unmatched File 2 (Red Header)
+  const unmatched2Table = createTable(unmatched2, "Outstanding in File 2", 10, "#ffcdd2");
+  resultsDiv.appendChild(unmatched2Table);
+
+  // Buttons
+  resultsDiv.insertAdjacentHTML("beforeend", `
     <label for="downloadFormat">Download Format:</label>
     <select id="downloadFormat">
       <option value="xlsx">Excel (.xlsx)</option>
       <option value="csv">CSV (.csv)</option>
     </select>
-    <button onclick="downloadReport()">Download Report</button>
-    <button onclick="clearLogs()">Clear Logs</button>
-  `;
+    <button onclick="downloadReport()">Download Full Report</button>
+    <button onclick="clearLogs()">Clear Logs & Uploads</button>
+  `);
 }
 
 function downloadReport() {
