@@ -4,35 +4,19 @@ let matchedDataGlobal = [];
 let unmatched1Global = [];
 let unmatched2Global = [];
 
-let uploadedFileNames = {
-  file1Name: "",
-  file2Name: ""
-};
-
 function reconcile() {
   const fileInput1 = document.getElementById("file1");
   const fileInput2 = document.getElementById("file2");
   const primaryField = document.getElementById("primaryField").value.trim();
   const secondaryField = document.getElementById("secondaryField").value.trim();
 
-const file1 = fileInput1.files[0];
-const file2 = fileInput2.files[0];
-
-uploadedFileNames.file1Name = file1.name;
-uploadedFileNames.file2Name = file2.name;
+  const file1 = fileInput1.files[0];
+  const file2 = fileInput2.files[0];
 
   if (!file1 || !file2 || !primaryField) {
     alert("Please select both files and enter a primary identifier.");
     return;
   }
-
-  // Save file names globally
-  window.uploadedFileNames = {
-    file1Name: file1.name,
-    file2Name: file2.name
-  };
-
-  // ... rest of function remains unchanged ...
 
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
@@ -147,163 +131,60 @@ function matchData(primaryField, secondaryField) {
 function displayResults(matched, unmatched1, unmatched2) {
   const resultsDiv = document.getElementById("results");
 
-  // Clear previous content
-  resultsDiv.innerHTML = "<h2>Results</h2>";
+  resultsDiv.innerHTML += `
+    <h3>Matched (${matched.length})</h3>
+    <ul>${matched.map(m => `<li>${JSON.stringify(m)}</li>`).join("")}</ul>
 
-  // Helper to create a styled table
-  function createTable(data, title, limit = 5, headerColor = "#d4f4dd") {
-    const limitedData = data.slice(0, limit);
-    const table = document.createElement("table");
-    table.style.borderCollapse = "collapse";
-    table.style.width = "100%";
-    table.style.marginBottom = "20px";
+    <h3>Unmatched in File 1 (${unmatched1.length})</h3>
+    <ul>${unmatched1.map(u => `<li>${JSON.stringify(u)}</li>`).join("")}</ul>
 
-    // Header row
-    const thead = document.createElement("thead");
-    const trHead = document.createElement("tr");
-    const th = document.createElement("th");
-    th.colSpan = 2;
-    th.textContent = `${title} (${data.length})`;
-    th.style.background = headerColor;
-    th.style.textAlign = "left";
-    th.style.padding = "10px";
-    trHead.appendChild(th);
-    thead.appendChild(trHead);
-    table.appendChild(thead);
+    <h3>Unmatched in File 2 (${unmatched2.length})</h3>
+    <ul>${unmatched2.map(u => `<li>${JSON.stringify(u)}</li>`).join("")}</ul>
 
-    // Body rows
-    const tbody = document.createElement("tbody");
-    limitedData.forEach((item, index) => {
-      const tr = document.createElement("tr");
-      const tdIndex = document.createElement("td");
-      tdIndex.textContent = index + 1;
-      tdIndex.style.fontWeight = "bold";
-      tdIndex.style.background = "#f0f0f0";
-      tdIndex.style.width = "50px";
-
-      const tdItem = document.createElement("td");
-      tdItem.textContent = JSON.stringify(item);
-      tr.appendChild(tdIndex);
-      tr.appendChild(tdItem);
-      tbody.appendChild(tr);
-    });
-
-    table.appendChild(tbody);
-    return table;
-  }
-
-  // Reconciled Items (Green Header)
-  const matchedTable = createTable(matched, "Reconciled", 5, "#c8e6c9");
-  resultsDiv.appendChild(matchedTable);
-
-  // Unmatched File 1 (Red Header)
-  const unmatched1Table = createTable(unmatched1, "Outstanding in File 1", 5, "#ffcdd2");
-  resultsDiv.appendChild(unmatched1Table);
-
-  // Unmatched File 2 (Red Header)
-  const unmatched2Table = createTable(unmatched2, "Outstanding in File 2", 5, "#ffcdd2");
-  resultsDiv.appendChild(unmatched2Table);
-
-  // Buttons
-  resultsDiv.insertAdjacentHTML("beforeend", `
     <label for="downloadFormat">Download Format:</label>
     <select id="downloadFormat">
       <option value="xlsx">Excel (.xlsx)</option>
       <option value="csv">CSV (.csv)</option>
     </select>
-    <button onclick="downloadReport()">Download Full Report</button>
-    <button onclick="clearLogs()">Clear Logs & Uploads</button>
-  `);
+    <button onclick="downloadReport()">Download Report</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+  `;
 }
 
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
-  const { file1Name, file2Name } = uploadedFileNames;
+  const wb = XLSX.utils.book_new();
+
+  function exportSheet(data, sheetName) {
+    if (data.length === 0) {
+      const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      return;
+    }
+
+    if (format === "xlsx") {
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    } else if (format === "csv") {
+      const csv = Papa.unparse(data);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `${sheetName}.csv`);
+    }
+  }
+
+  exportSheet(matchedDataGlobal, "Reconciled");
+  exportSheet(unmatched1Global, "Outstanding File 1");
+  exportSheet(unmatched2Global, "Outstanding File 2");
 
   if (format === "xlsx") {
-    const wb = XLSX.utils.book_new();
-
-    function addSheet(data, sheetName, colorHex = "#FFFFFF") {
-      if (!data || data.length === 0) {
-        const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        return;
-      }
-
-      // Convert all fields to strings to avoid number formatting
-      const stringifiedData = data.map(row => {
-        const newRow = {};
-        for (let key in row) {
-          const value = row[key];
-
-          // Force string format for potential large numbers
-          if (typeof value === 'number' && !key.toLowerCase().includes('amount')) {
-            newRow[key] = String(value);
-          } else {
-            newRow[key] = value;
-          }
-        }
-        return newRow;
-      });
-
-      const ws = XLSX.utils.json_to_sheet(stringifiedData);
-
-      // Set column widths and styles
-      ws['!cols'] = Object.keys(stringifiedData[0]).map(() => ({ wch: 20 }));
-
-      // Apply tab color
-      if (ws["A1"]) {
-        ws["A1"].s = {
-          fill: { fgColor: { rgb: colorHex.replace("#", "") + "FF" } }
-        };
-      }
-
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    }
-
-    addSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Green
-    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Red
-    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
-
-    XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
-  } else if (format === "csv") {
-    const zip = new JSZip();
-    const csvFolder = zip.folder("Reconciliation_CSV");
-
-    function addCSV(data, filename) {
-      if (!data || data.length === 0) {
-        csvFolder.file(`${filename}.csv`, `No data available`);
-        return;
-      }
-
-      const csv = Papa.unparse(data);
-      csvFolder.file(`${filename}.csv`, csv);
-    }
-
-    addCSV(matchedDataGlobal, `Reconciled-${file1Name}-${file2Name}`);
-    addCSV(unmatched1Global, `Outstanding-File1-${file1Name}`);
-    addCSV(unmatched2Global, `Outstanding-File2-${file2Name}`);
-
-    zip.generateAsync({ type: "blob" }).then(function (content) {
-      saveAs(content, "Reconciliation_Report_CSV.zip");
-    });
+    XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
   }
 
   clearLogs();
 }
+
 function clearLogs() {
   document.getElementById("results").innerHTML = "";
   document.getElementById("progressBar").value = 0;
   document.getElementById("progressText").textContent = "";
-
-  // Reset file inputs
-  document.getElementById("file1").value = "";
-  document.getElementById("file2").value = "";
-
-  // Reset global arrays
-  data1 = [];
-  data2 = [];
-  matchedDataGlobal = [];
-  unmatched1Global = [];
-  unmatched2Global = [];
 }
