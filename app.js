@@ -107,20 +107,8 @@ function parseFile(file, id, callback) {
 }
 
 /**
- * Normalizes phone numbers by extracting last 9 digits.
- * Handles masked values like "0712***678"
- */
-function normalizePhoneNumber(phone) {
-  if (!phone) return "";
-  const str = String(phone).replace(/\D/g, '');
-  return str.slice(-9); // Last 9 digits for Kenyan format
-}
-
-/**
- * Matches data from File 2 against File 1 using:
- * - Primary identifier (exact match required)
- * - Optional secondary field (e.g., amount)
- * - Ensures one-to-one matching
+ * Performs exact match reconciliation using primary identifier
+ * Optionally uses secondary field for accuracy
  */
 function matchData(primaryField, secondaryField = "") {
   const map1 = {};
@@ -128,59 +116,55 @@ function matchData(primaryField, secondaryField = "") {
   const unmatched1 = [];
   const unmatched2 = [];
 
-  // Build map from File 1
+  // Build map from File 1 by exact primary identifier
   for (const row of data1) {
-    const rawKey = row[primaryField];
+    const key = row[primaryField];
 
     // Skip if empty/null/N/A
-    if (!rawKey || String(rawKey).trim().toLowerCase() === "n/a" || String(rawKey).trim() === "") {
+    if (!key || String(key).trim().toLowerCase() === "n/a" || String(key).trim() === "") {
       continue;
     }
-
-    const key = normalizePhoneNumber(rawKey);
 
     if (!map1[key]) map1[key] = [];
     map1[key].push(row);
   }
 
-  // Match with File 2
+  // Match against File 2
   for (const row of data2) {
-    const rawKey = row[primaryField];
+    const key = row[primaryField];
 
     // Skip if empty/null/N/A
-    if (!rawKey || String(rawKey).trim().toLowerCase() === "n/a" || String(rawKey).trim() === "") {
+    if (!key || String(key).trim() === "" || String(key).toLowerCase() === "n/a") {
       unmatched2.push(row);
       continue;
     }
 
-    const key = normalizePhoneNumber(rawKey);
+    const candidates = map1[key];
 
-    if (!map1[key]) {
+    if (!candidates || candidates.length === 0) {
       unmatched2.push(row);
       continue;
     }
 
     let match;
 
-    // If secondary field is provided, use it for exact match
+    // Use secondary field if provided
     if (secondaryField && row[secondaryField]) {
-      const targetValue = parseFloat(row[secondaryField]);
-      match = map1[key].find(r => {
-        const rVal = parseFloat(r[secondaryField]);
-        return !isNaN(targetValue) && !isNaN(rVal) && rVal === targetValue;
-      });
+      const targetValue = row[secondaryField];
+      match = candidates.find(r => r[secondaryField] === targetValue);
     } else {
-      match = map1[key][0]; // Fallback: First available match
+      match = candidates[0]; // Fallback: First available match
     }
 
     if (match) {
+      // Include all original fields + add MatchedTo info
       matched.push({
         ...row,
         MatchedTo: JSON.stringify(match)
       });
 
       // Remove matched item from pool
-      map1[key] = map1[key].filter(r => r !== match);
+      map1[key] = candidates.filter(r => r !== match);
     } else {
       unmatched2.push(row); // No match found
     }
@@ -196,7 +180,6 @@ function matchData(primaryField, secondaryField = "") {
   unmatched1Global = unmatched1;
   unmatched2Global = unmatched2;
 }
-
 // Display preview of top 5 items
 function displayResults(matched, unmatched1, unmatched2) {
   const resultsDiv = document.getElementById("results");
