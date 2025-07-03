@@ -106,7 +106,22 @@ function parseFile(file, id, callback) {
   }
 }
 
-// Match data
+/**
+ * Normalizes phone numbers by extracting last 9 digits.
+ * Handles masked values like "0712***678"
+ */
+function normalizePhoneNumber(phone) {
+  if (!phone) return "";
+  const str = String(phone).replace(/\D/g, '');
+  return str.slice(-9); // Last 9 digits for Kenyan format
+}
+
+/**
+ * Matches data from File 2 against File 1 using:
+ * - Primary identifier (exact match required)
+ * - Optional secondary field (e.g., amount)
+ * - Ensures one-to-one matching
+ */
 function matchData(primaryField, secondaryField = "") {
   const map1 = {};
   const matched = [];
@@ -116,9 +131,14 @@ function matchData(primaryField, secondaryField = "") {
   // Build map from File 1
   for (const row of data1) {
     const rawKey = row[primaryField];
+
+    // Skip if empty/null/N/A
+    if (!rawKey || String(rawKey).trim().toLowerCase() === "n/a" || String(rawKey).trim() === "") {
+      continue;
+    }
+
     const key = normalizePhoneNumber(rawKey);
 
-    if (!key) continue;
     if (!map1[key]) map1[key] = [];
     map1[key].push(row);
   }
@@ -126,6 +146,13 @@ function matchData(primaryField, secondaryField = "") {
   // Match with File 2
   for (const row of data2) {
     const rawKey = row[primaryField];
+
+    // Skip if empty/null/N/A
+    if (!rawKey || String(rawKey).trim().toLowerCase() === "n/a" || String(rawKey).trim() === "") {
+      unmatched2.push(row);
+      continue;
+    }
+
     const key = normalizePhoneNumber(rawKey);
 
     if (!map1[key]) {
@@ -135,26 +162,36 @@ function matchData(primaryField, secondaryField = "") {
 
     let match;
 
+    // If secondary field is provided, use it for exact match
     if (secondaryField && row[secondaryField]) {
-      const targetValue = row[secondaryField];
-      match = map1[key].find(r => r[secondaryField] === targetValue);
+      const targetValue = parseFloat(row[secondaryField]);
+      match = map1[key].find(r => {
+        const rVal = parseFloat(r[secondaryField]);
+        return !isNaN(targetValue) && !isNaN(rVal) && rVal === targetValue;
+      });
     } else {
-      match = map1[key][0]; // Fallback to first match
+      match = map1[key][0]; // Fallback: First available match
     }
 
     if (match) {
-      matched.push({ ...row, MatchedTo: JSON.stringify(match) });
+      matched.push({
+        ...row,
+        MatchedTo: JSON.stringify(match)
+      });
+
+      // Remove matched item from pool
       map1[key] = map1[key].filter(r => r !== match);
     } else {
-      unmatched2.push(row);
+      unmatched2.push(row); // No match found
     }
   }
 
-  // Remaining unmatched in File 1
+  // Remaining in File 1 are unmatched
   for (const key in map1) {
     unmatched1.push(...map1[key]);
   }
 
+  // Save globally for preview/download
   matchedDataGlobal = matched;
   unmatched1Global = unmatched1;
   unmatched2Global = unmatched2;
