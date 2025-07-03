@@ -1,3 +1,5 @@
+let data1 = [];
+let data2 = [];
 let matchedDataGlobal = [];
 let unmatched1Global = [];
 let unmatched2Global = [];
@@ -27,9 +29,9 @@ function reconcile() {
     return;
   }
 
-  console.log("Reconcile started...");
+  uploadedFileNames.file1Name = file1.name;
+  uploadedFileNames.file2Name = file2.name;
 
-  // Show progress bar
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
   const resultsDiv = document.getElementById("results");
@@ -86,8 +88,10 @@ function parseFile(file, id, callback) {
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       parsedData = XLSX.utils.sheet_to_json(sheet);
+
       if (id === 1) data1 = parsedData;
       else data2 = parsedData;
+
       callback();
     }
   };
@@ -105,44 +109,36 @@ function matchData(primaryField, secondaryField = "") {
   const unmatched1 = [];
   const unmatched2 = [];
 
+  // Build map from File 1
   for (const row of data1) {
-    const rawKey = row[primaryField];
-    const key = normalizePhoneNumber(rawKey);
-
-    if (!key) continue;
+    const key = row[primaryField];
     if (!map1[key]) map1[key] = [];
     map1[key].push(row);
   }
 
+  // Match with File 2
   for (const row of data2) {
-    const rawKey = row[primaryField];
-    const key = normalizePhoneNumber(rawKey);
+    const key = row[primaryField];
 
-    if (!key || !map1[key]) {
-      unmatched2.push(row);
-      continue;
-    }
-
-    let match;
-
-    if (secondaryField && row[secondaryField]) {
-      const targetValue = row[secondaryField];
-      match = map1[key].find(r => r[secondaryField] === targetValue);
-    } else {
-      match = map1[key][0];
-    }
-
-    if (match) {
-      matched.push({
-        ...row,
-        MatchedTo: JSON.stringify(match)
-      });
-      map1[key].shift(); // Remove matched item
+    if (map1[key]) {
+      if (secondaryField && row[secondaryField]) {
+        const match = map1[key].find(r => r[secondaryField] === row[secondaryField]);
+        if (match) {
+          matched.push({ ...row, MatchedTo: JSON.stringify(match) });
+          map1[key] = map1[key].filter(r => r !== match);
+        } else {
+          unmatched2.push(row);
+        }
+      } else {
+        matched.push({ ...row, MatchedTo: JSON.stringify(map1[key][0]) });
+        map1[key].shift(); // Remove matched item
+      }
     } else {
       unmatched2.push(row);
     }
   }
 
+  // Remaining in File 1 are unmatched
   for (const key in map1) {
     unmatched1.push(...map1[key]);
   }
@@ -169,7 +165,6 @@ function displayResults(matched, unmatched1, unmatched2) {
     headerCell.style.background = headerColor;
     headerCell.style.textAlign = "left";
     headerCell.style.padding = "10px";
-    headerCell.style.fontSize = "16px";
     headerRow.appendChild(headerCell);
     table.appendChild(headerRow);
 
@@ -181,11 +176,9 @@ function displayResults(matched, unmatched1, unmatched2) {
       tdIndex.style.fontWeight = "bold";
       tdIndex.style.background = "#f0f0f0";
       tdIndex.style.width = "50px";
-      tdIndex.style.fontSize = "14px";
 
       const tdItem = document.createElement("td");
       tdItem.textContent = JSON.stringify(item);
-      tdItem.style.fontSize = "14px";
 
       tr.appendChild(tdIndex);
       tr.appendChild(tdItem);
