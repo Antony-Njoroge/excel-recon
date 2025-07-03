@@ -8,7 +8,7 @@ let uploadedFileNames = {
   file1Name: "",
   file2Name: ""
 };
-// Normalize phone numbers for matching
+
 function normalizePhoneNumber(phone) {
   if (!phone) return "";
   const str = String(phone).replace(/\D/g, '');
@@ -16,29 +16,30 @@ function normalizePhoneNumber(phone) {
 }
 
 function reconcile() {
-  const file1 = document.getElementById("file1").files[0];
-  const file2 = document.getElementById("file2").files[0];
+  const fileInput1 = document.getElementById("file1");
+  const fileInput2 = document.getElementById("file2");
   const primaryField = document.getElementById("primaryField").value.trim();
+  const secondaryField = document.getElementById("secondaryField").value.trim();
 
-  if (!file1 || !file2) {
-    alert("Please upload both documents before reconciling.");
+  const file1 = fileInput1.files[0];
+  const file2 = fileInput2.files[0];
+
+  if (!file1 || !file2 || !primaryField) {
+    alert("Please upload both files and enter a primary identifier.");
     return;
   }
 
-  if (!primaryField) {
-    alert("Please enter a primary identifier (e.g., InvoiceID or Phone)");
-    return;
-  }
+  uploadedFileNames.file1Name = file1.name;
+  uploadedFileNames.file2Name = file2.name;
 
-  // Start reconciliation process
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
   const resultsDiv = document.getElementById("results");
 
-  progressBar.style.display = "block";
+  progressBar.style.display = 'block';
   progressBar.value = 0;
   progressText.textContent = "Starting...";
-  resultsDiv.innerHTML = ""; // Clear previous results
+  resultsDiv.innerHTML = "";
 
   setTimeout(() => {
     progressText.textContent = "⏳ Loading first file...";
@@ -106,7 +107,6 @@ function matchData(primaryField, secondaryField = "") {
   const unmatched1 = [];
   const unmatched2 = [];
 
-  // Build map for file 1
   for (const row of data1) {
     const rawKey = row[primaryField];
     const key = normalizePhoneNumber(rawKey);
@@ -116,7 +116,6 @@ function matchData(primaryField, secondaryField = "") {
     map1[key].push(row);
   }
 
-  // Match with file 2
   for (const row of data2) {
     const rawKey = row[primaryField];
     const key = normalizePhoneNumber(rawKey);
@@ -146,7 +145,6 @@ function matchData(primaryField, secondaryField = "") {
     }
   }
 
-  // Remaining in file 1 are unmatched
   for (const key in map1) {
     unmatched1.push(...map1[key]);
   }
@@ -202,8 +200,8 @@ function displayResults(matched, unmatched1, unmatched2) {
   resultsDiv.innerHTML = "<h3 style='font-size:16px;'>Preview (Top 5 Items)</h3>";
 
   resultsDiv.appendChild(createTable(matched, "Reconciled", 5, "#c8e6c9"));
-  resultsDiv.appendChild(createTable(unmatched1, `Outstanding in File 1`, 5, "#ffcdd2"));
-  resultsDiv.appendChild(createTable(unmatched2, `Outstanding in File 2`, 5, "#ffcdd2"));
+  resultsDiv.appendChild(createTable(unmatched1, "Outstanding in File 1", 5, "#ffcdd2"));
+  resultsDiv.appendChild(createTable(unmatched2, "Outstanding in File 2", 5, "#ffcdd2"));
 
   resultsDiv.insertAdjacentHTML("beforeend", `
     <label for="downloadFormat">Download Format:</label>
@@ -217,12 +215,11 @@ function displayResults(matched, unmatched1, unmatched2) {
 }
 
 function downloadReport() {
-function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
+  const { file1Name, file2Name } = uploadedFileNames;
 
-  // Ensure data exists
   if (!matchedDataGlobal || !unmatched1Global || !unmatched2Global) {
-    alert("No data available. Please reconcile files first.");
+    alert("No data available to export.");
     return;
   }
 
@@ -230,30 +227,20 @@ function downloadReport() {
     const wb = XLSX.utils.book_new();
 
     function addSheet(data, sheetName, colorHex = "FFFFFF") {
-      if (!data || data.length === 0) {
-        const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        return;
-      }
-
-      // Convert all values to strings to prevent scientific notation
       const stringifiedData = data.map(row => {
         const newRow = {};
         for (let key in row) {
-          let value = row[key];
+          const value = row[key];
           newRow[key] = typeof value === 'number' ? String(value) : value;
         }
         return newRow;
       });
 
       const ws = XLSX.utils.json_to_sheet(stringifiedData);
-
-      // Set column widths
       ws['!cols'] = Object.keys(stringifiedData[0]).map(() => ({ wch: 20 }));
 
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-      // Apply tab color
       if (!wb.Workbook) wb.Workbook = { Sheets: [] };
       wb.Workbook.Sheets.push({
         name: sheetName,
@@ -262,12 +249,12 @@ function downloadReport() {
       });
     }
 
-    addSheet(matchedDataGlobal, "Reconciled", "C8E6C9"); // Green
-    addSheet(unmatched1Global, "Outstanding File 1", "FFCDD2"); // Red
-    addSheet(unmatched2Global, "Outstanding File 2", "FFCDD2"); // Red
+    addSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Green
+    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Red
+    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
 
     try {
-      XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
+      XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
     } catch (e) {
       console.error("Failed to generate Excel file:", e);
       alert("Error generating Excel file. See console for details.");
@@ -286,16 +273,16 @@ function downloadReport() {
       csvFolder.file(`${filename}.csv`, csv);
     }
 
-    addCSV(matchedDataGlobal, "Reconciled_Items");
-    addCSV(unmatched1Global, "Outstanding_File1");
-    addCSV(unmatched2Global, "Outstanding_File2");
+    addCSV(matchedDataGlobal, `Reconciled_Items`);
+    addCSV(unmatched1Global, `Outstanding_File1_${file1Name}`);
+    addCSV(unmatched2Global, `Outstanding_File2_${file2Name}`);
 
     zip.generateAsync({ type: "blob" }).then(function (content) {
       saveAs(content, "Reconciliation_Report_CSV.zip");
     });
   }
 
-  clearLogs(); // Optional: Clear logs after download
+  clearLogs();
 }
 
 function clearLogs() {
