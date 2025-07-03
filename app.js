@@ -216,7 +216,7 @@ function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
   const { file1Name, file2Name } = uploadedFileNames;
 
-  // Validate data exists
+  // Ensure data exists
   if (!matchedDataGlobal || !unmatched1Global || !unmatched2Global) {
     alert("No data available. Please reconcile files first.");
     return;
@@ -232,7 +232,7 @@ function downloadReport() {
         return;
       }
 
-      // Convert all values to strings to avoid scientific notation
+      // Convert all values to strings to prevent scientific notation
       const stringifiedData = data.map(row => {
         const newRow = {};
         for (let key in row) {
@@ -243,10 +243,13 @@ function downloadReport() {
       });
 
       const ws = XLSX.utils.json_to_sheet(stringifiedData);
+
+      // Set column widths
       ws['!cols'] = Object.keys(stringifiedData[0]).map(() => ({ wch: 20 }));
 
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
+      // Apply tab color
       if (!wb.Workbook) wb.Workbook = { Sheets: [] };
       wb.Workbook.Sheets.push({
         name: sheetName,
@@ -260,7 +263,7 @@ function downloadReport() {
     addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
 
     try {
-      XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+      XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
     } catch (e) {
       console.error("Failed to generate Excel file:", e);
       alert("Error generating Excel file. See console for details.");
@@ -279,7 +282,7 @@ function downloadReport() {
       csvFolder.file(`${filename}.csv`, csv);
     }
 
-    addCSV(matchedDataGlobal, `Reconciled_Items`);
+    addCSV(matchedDataGlobal, "Reconciled_Items");
     addCSV(unmatched1Global, `Outstanding_File1_${file1Name}`);
     addCSV(unmatched2Global, `Outstanding_File2_${file2Name}`);
 
@@ -287,6 +290,9 @@ function downloadReport() {
       saveAs(content, "Reconciliation_Report_CSV.zip");
     });
   }
+
+  clearLogs(); // Optional: Clear logs after download
+}
 
   clearLogs(); // Optional: Clear logs after download
 }
