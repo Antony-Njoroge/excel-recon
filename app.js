@@ -218,8 +218,9 @@ function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
   const { file1Name, file2Name } = uploadedFileNames;
 
+  // Validate data exists
   if (!matchedDataGlobal || !unmatched1Global || !unmatched2Global) {
-    alert("No data available to export.");
+    alert("No data available. Please reconcile files first.");
     return;
   }
 
@@ -227,10 +228,17 @@ function downloadReport() {
     const wb = XLSX.utils.book_new();
 
     function addSheet(data, sheetName, colorHex = "FFFFFF") {
+      if (!data || data.length === 0) {
+        const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        return;
+      }
+
+      // Convert all values to strings to avoid scientific notation
       const stringifiedData = data.map(row => {
         const newRow = {};
         for (let key in row) {
-          const value = row[key];
+          let value = row[key];
           newRow[key] = typeof value === 'number' ? String(value) : value;
         }
         return newRow;
@@ -282,6 +290,8 @@ function downloadReport() {
     });
   }
 
+  clearLogs(); // Optional: Clear logs after download
+}
   clearLogs();
 }
 
