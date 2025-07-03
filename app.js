@@ -9,15 +9,15 @@ let uploadedFileNames = {
   file2Name: ""
 };
 
+// Normalize phone numbers by extracting last 9 digits
 function normalizePhoneNumber(phone) {
   if (!phone) return "";
   const str = String(phone).replace(/\D/g, '');
-  return str.slice(-9); // Last 9 digits for Kenyan numbers
+  return str.slice(-9); // Last 9 digits
 }
 
+// Reconcile function
 function reconcile() {
-  alert("Reconcile button clicked!");
-} {
   const fileInput1 = document.getElementById("file1");
   const fileInput2 = document.getElementById("file2");
   const primaryField = document.getElementById("primaryField").value.trim();
@@ -31,10 +31,9 @@ function reconcile() {
     return;
   }
 
-  console.log("Reconciling with Primary Field:", primaryField);
-  console.log("Secondary Field:", secondaryField);
+  uploadedFileNames.file1Name = file1.name;
+  uploadedFileNames.file2Name = file2.name;
 
-  // Reset UI
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
   const resultsDiv = document.getElementById("results");
@@ -68,6 +67,8 @@ function reconcile() {
     });
   }, 200);
 }
+
+// Parse CSV or Excel
 function parseFile(file, id, callback) {
   const reader = new FileReader();
 
@@ -105,6 +106,7 @@ function parseFile(file, id, callback) {
   }
 }
 
+// Match data
 function matchData(primaryField, secondaryField = "") {
   const map1 = {};
   const matched = [];
@@ -113,34 +115,42 @@ function matchData(primaryField, secondaryField = "") {
 
   // Build map from File 1
   for (const row of data1) {
-    const key = row[primaryField];
+    const rawKey = row[primaryField];
+    const key = normalizePhoneNumber(rawKey);
+
+    if (!key) continue;
     if (!map1[key]) map1[key] = [];
     map1[key].push(row);
   }
 
   // Match with File 2
   for (const row of data2) {
-    const key = row[primaryField];
+    const rawKey = row[primaryField];
+    const key = normalizePhoneNumber(rawKey);
 
-    if (map1[key]) {
-      if (secondaryField && row[secondaryField]) {
-        const match = map1[key].find(r => r[secondaryField] === row[secondaryField]);
-        if (match) {
-          matched.push({ ...row, MatchedTo: JSON.stringify(match) });
-          map1[key] = map1[key].filter(r => r !== match);
-        } else {
-          unmatched2.push(row);
-        }
-      } else {
-        matched.push({ ...row, MatchedTo: JSON.stringify(map1[key][0]) });
-        map1[key].shift(); // Remove matched item
-      }
+    if (!map1[key]) {
+      unmatched2.push(row);
+      continue;
+    }
+
+    let match;
+
+    if (secondaryField && row[secondaryField]) {
+      const targetValue = row[secondaryField];
+      match = map1[key].find(r => r[secondaryField] === targetValue);
+    } else {
+      match = map1[key][0]; // Fallback to first match
+    }
+
+    if (match) {
+      matched.push({ ...row, MatchedTo: JSON.stringify(match) });
+      map1[key] = map1[key].filter(r => r !== match);
     } else {
       unmatched2.push(row);
     }
   }
 
-  // Remaining in File 1 are unmatched
+  // Remaining unmatched in File 1
   for (const key in map1) {
     unmatched1.push(...map1[key]);
   }
@@ -150,6 +160,7 @@ function matchData(primaryField, secondaryField = "") {
   unmatched2Global = unmatched2;
 }
 
+// Display preview of top 5 items
 function displayResults(matched, unmatched1, unmatched2) {
   const resultsDiv = document.getElementById("results");
 
@@ -158,7 +169,6 @@ function displayResults(matched, unmatched1, unmatched2) {
     const table = document.createElement("table");
     table.style.width = "100%";
     table.style.borderCollapse = "collapse";
-    table.style.marginBottom = "20px";
 
     const headerRow = document.createElement("tr");
     const headerCell = document.createElement("th");
@@ -190,7 +200,7 @@ function displayResults(matched, unmatched1, unmatched2) {
     return table;
   }
 
-  resultsDiv.innerHTML = "<h3 style='font-size:16px;'>Preview (Top 5 Items)</h3>";
+  resultsDiv.innerHTML = "<h3>Preview (Top 5 Items)</h3>";
 
   resultsDiv.appendChild(createTable(matched, "Reconciled", 5, "#c8e6c9"));
   resultsDiv.appendChild(createTable(unmatched1, "Outstanding in File 1", 5, "#ffcdd2"));
@@ -207,13 +217,13 @@ function displayResults(matched, unmatched1, unmatched2) {
   `);
 }
 
+// Download report
 function downloadReport() {
   const format = document.getElementById("downloadFormat").value;
   const { file1Name, file2Name } = uploadedFileNames;
 
-  // Ensure data exists
   if (!matchedDataGlobal || !unmatched1Global || !unmatched2Global) {
-    alert("No data available. Please reconcile files first.");
+    alert("No data available to export.");
     return;
   }
 
@@ -221,13 +231,6 @@ function downloadReport() {
     const wb = XLSX.utils.book_new();
 
     function addSheet(data, sheetName, colorHex = "FFFFFF") {
-      if (!data || data.length === 0) {
-        const ws = XLSX.utils.aoa_to_sheet([[`No data available for ${sheetName}`]]);
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        return;
-      }
-
-      // Convert all values to strings to prevent scientific notation
       const stringifiedData = data.map(row => {
         const newRow = {};
         for (let key in row) {
@@ -238,13 +241,10 @@ function downloadReport() {
       });
 
       const ws = XLSX.utils.json_to_sheet(stringifiedData);
-
-      // Set column widths
       ws['!cols'] = Object.keys(stringifiedData[0]).map(() => ({ wch: 20 }));
 
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-      // Apply tab color
       if (!wb.Workbook) wb.Workbook = { Sheets: [] };
       wb.Workbook.Sheets.push({
         name: sheetName,
@@ -253,12 +253,12 @@ function downloadReport() {
       });
     }
 
-    addSheet(matchedDataGlobal, `Reconciled - ${file1Name} & ${file2Name}`, "C8E6C9"); // Green
-    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2");         // Red
-    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2");         // Red
+    addSheet(matchedDataGlobal, `Reconciled`, "C8E6C9"); // Green
+    addSheet(unmatched1Global, `Outstanding File 1 - ${file1Name}`, "FFCDD2"); // Red
+    addSheet(unmatched2Global, `Outstanding File 2 - ${file2Name}`, "FFCDD2"); // Red
 
     try {
-      XLSX.writeFile(wb, "Reconciliation_Report.xlsx");
+      XLSX.writeFile(wb, `Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
     } catch (e) {
       console.error("Failed to generate Excel file:", e);
       alert("Error generating Excel file. See console for details.");
@@ -289,11 +289,7 @@ function downloadReport() {
   clearLogs(); // Optional: Clear logs after download
 }
 
-  clearLogs(); // Optional: Clear logs after download
-}
-  clearLogs();
-}
-
+// Clear logs and reset UI
 function clearLogs() {
   document.getElementById("results").innerHTML = "";
   document.getElementById("progressBar").value = 0;
