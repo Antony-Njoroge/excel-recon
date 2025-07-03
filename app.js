@@ -1,3 +1,5 @@
+let data1 = [];
+let data2 = [];
 let matchedDataGlobal = [];
 let unmatched1Global = [];
 let unmatched2Global = [];
@@ -18,27 +20,28 @@ function reconcile() {
   const file2 = document.getElementById("file2").files[0];
   const primaryField = document.getElementById("primaryField").value.trim();
 
-  // Validate input
   if (!file1 || !file2) {
     alert("Please upload both documents before reconciling.");
     return;
   }
 
   if (!primaryField) {
-    alert("Please enter a primary identifier (e.g., InvoiceID, Phone Number)");
+    alert("Please enter a primary identifier (e.g., InvoiceID or Phone)");
     return;
   }
 
-  // Show progress bar
+  // Start reconciliation process
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
+  const resultsDiv = document.getElementById("results");
+
   progressBar.style.display = "block";
   progressBar.value = 0;
   progressText.textContent = "Starting...";
+  resultsDiv.innerHTML = ""; // Clear previous results
 
-  // Proceed with parsing
   setTimeout(() => {
-    progressText.textContent = "⏳ Loading File 1...";
+    progressText.textContent = "⏳ Loading first file...";
     progressBar.value = 10;
 
     parseFile(file1, 1, () => {
@@ -51,7 +54,7 @@ function reconcile() {
           progressBar.value = 70;
 
           setTimeout(() => {
-            matchData(primaryField, document.getElementById("secondaryField").value.trim());
+            matchData(primaryField, secondaryField);
             progressBar.value = 100;
             progressText.textContent = "✅ Matching complete!";
             displayResults(matchedDataGlobal, unmatched1Global, unmatched2Global);
