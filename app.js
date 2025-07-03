@@ -14,38 +14,31 @@ function normalizePhoneNumber(phone) {
 }
 
 function reconcile() {
-  const fileInput1 = document.getElementById("file1");
-  const fileInput2 = document.getElementById("file2");
+  const file1 = document.getElementById("file1").files[0];
+  const file2 = document.getElementById("file2").files[0];
   const primaryField = document.getElementById("primaryField").value.trim();
-  const secondaryField = document.getElementById("secondaryField").value.trim();
 
-  const file1 = fileInput1.files[0];
-  const file2 = fileInput2.files[0];
-
-  if (!file1 || !file2 || !primaryField) {
-    alert("Please select both files and enter a primary identifier.");
+  // Validate input
+  if (!file1 || !file2) {
+    alert("Please upload both documents before reconciling.");
     return;
   }
 
-  // If everything is OK, parsing starts here
-  console.log("Reconcile started...");
-  // ... rest of your logic
-}
+  if (!primaryField) {
+    alert("Please enter a primary identifier (e.g., InvoiceID, Phone Number)");
+    return;
+  }
 
-  uploadedFileNames.file1Name = file1.name;
-  uploadedFileNames.file2Name = file2.name;
-
+  // Show progress bar
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
-  const resultsDiv = document.getElementById("results");
-
-  progressBar.style.display = 'block';
+  progressBar.style.display = "block";
   progressBar.value = 0;
   progressText.textContent = "Starting...";
-  resultsDiv.innerHTML = "";
 
+  // Proceed with parsing
   setTimeout(() => {
-    progressText.textContent = "⏳ Loading first file...";
+    progressText.textContent = "⏳ Loading File 1...";
     progressBar.value = 10;
 
     parseFile(file1, 1, () => {
@@ -58,7 +51,7 @@ function reconcile() {
           progressBar.value = 70;
 
           setTimeout(() => {
-            matchData(primaryField, secondaryField);
+            matchData(primaryField, document.getElementById("secondaryField").value.trim());
             progressBar.value = 100;
             progressText.textContent = "✅ Matching complete!";
             displayResults(matchedDataGlobal, unmatched1Global, unmatched2Global);
