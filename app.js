@@ -1,5 +1,3 @@
-let data1 = [];
-let data2 = [];
 let matchedDataGlobal = [];
 let unmatched1Global = [];
 let unmatched2Global = [];
