@@ -29,9 +29,10 @@ function reconcile() {
     return;
   }
 
-  uploadedFileNames.file1Name = file1.name;
-  uploadedFileNames.file2Name = file2.name;
+  console.log("Reconciling with Primary Field:", primaryField);
+  console.log("Secondary Field:", secondaryField);
 
+  // Reset UI
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
   const resultsDiv = document.getElementById("results");
@@ -65,7 +66,6 @@ function reconcile() {
     });
   }, 200);
 }
-
 function parseFile(file, id, callback) {
   const reader = new FileReader();
 
