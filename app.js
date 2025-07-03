@@ -29,14 +29,14 @@ function reconcile() {
     return;
   }
 
-  uploadedFileNames.file1Name = file1.name;
-  uploadedFileNames.file2Name = file2.name;
+  console.log("Reconcile started...");
 
+  // Show progress bar
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
   const resultsDiv = document.getElementById("results");
 
-  progressBar.style.display = 'block';
+  progressBar.style.display = "block";
   progressBar.value = 0;
   progressText.textContent = "Starting...";
   resultsDiv.innerHTML = "";
