@@ -16,6 +16,8 @@ function normalizePhoneNumber(phone) {
 }
 
 function reconcile() {
+  alert("Reconcile button clicked!");
+} {
   const fileInput1 = document.getElementById("file1");
   const fileInput2 = document.getElementById("file2");
   const primaryField = document.getElementById("primaryField").value.trim();
